@@ -2,8 +2,8 @@
 {
     public class LogInDTO
     {
-        public required string managerEmail { get; set; }
-        public required string cashierEmail { get; set; }
+        public required string ManagerEmail { get; set; }
+        public required string CashierEmail { get; set; }
 
     }
 }

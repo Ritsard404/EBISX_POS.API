@@ -6,5 +6,6 @@ namespace EBISX_POS.API.Services.Interfaces
     {
         Task<(bool, string, string)> LogIn(LogInDTO logInDTO);
         Task<List<CashierDTO>> Cashiers();
+
     }
 }
