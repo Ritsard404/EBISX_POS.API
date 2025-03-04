@@ -16,13 +16,7 @@ namespace EBISX_POS.API.Data
         public DbSet<Order> Order { get; set; }
         public DbSet<Item> Item { get; set; }
         public DbSet<DrinkType> DrinkType { get; set; }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<Menu>()
-                .Property(m => m.Size)
-                .HasConversion<string>(); // Store enum as string
-        }
+        public DbSet<AddOnType> AddOnType { get; set; }
 
         // ✅ Auto-calculate subtotal before saving
         public override int SaveChanges()

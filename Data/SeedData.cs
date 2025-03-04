@@ -41,6 +41,13 @@ namespace EBISX_POS.API.Data
                 };
                 context.DrinkType.AddRange(drinkTypes);
 
+                var addOnTypes = new AddOnType[]
+                {
+                    new AddOnType{ AddOnTypeName = "Sides" },
+                    new AddOnType{ AddOnTypeName = "Desserts" },
+                };
+                context.AddOnType.AddRange(addOnTypes);
+
                 var categories = new Category[]
                 {
                     new Category { CtgryName = "Burger" },
@@ -105,17 +112,18 @@ namespace EBISX_POS.API.Data
                     new Menu { MenuName = "Pinaig na Mais", MenuPrice = 3.99m, Category = categories[4], Size = MenuSize.L.ToString(), DrinkType = drinkTypes[0], HasDrink = false, HasAddOn = false, IsAddOn = true },
 
                     // Desserts
-                    new Menu { MenuName = "Ice Cream", MenuPrice = 2.99m, Category = categories[5], Size = MenuSize.R.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true  },
-                    new Menu { MenuName = "Ice Cream", MenuPrice = 3.99m, Category = categories[5], Size = MenuSize.M.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true  },
-                    new Menu { MenuName = "Ice Cream", MenuPrice = 4.99m, Category = categories[5], Size = MenuSize.L.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true  },
-                    new Menu { MenuName = "Durian Pie", MenuPrice = 2.99m, Category = categories[5], Size = MenuSize.R.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true  },
-                    new Menu { MenuName = "Durian Pie", MenuPrice = 3.99m, Category = categories[5], Size = MenuSize.M.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true  },
-                    new Menu { MenuName = "Durian Pie", MenuPrice = 4.99m, Category = categories[5], Size = MenuSize.L.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true  },
+                    new Menu { MenuName = "Ice Cream", MenuPrice = 2.99m, Category = categories[5], Size = MenuSize.R.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true, AddOnType = addOnTypes[1]  },
+                    new Menu { MenuName = "Ice Cream", MenuPrice = 3.99m, Category = categories[5], Size = MenuSize.M.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true, AddOnType = addOnTypes[1]  },
+                    new Menu { MenuName = "Ice Cream", MenuPrice = 4.99m, Category = categories[5], Size = MenuSize.L.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true, AddOnType = addOnTypes[1]  },
+                    new Menu { MenuName = "Durian Pie", MenuPrice = 2.99m, Category = categories[5], Size = MenuSize.R.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true, AddOnType = addOnTypes[1]  },
+                    new Menu { MenuName = "Durian Pie", MenuPrice = 3.99m, Category = categories[5], Size = MenuSize.M.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true, AddOnType = addOnTypes[1]  },
+                    new Menu { MenuName = "Durian Pie", MenuPrice = 4.99m, Category = categories[5], Size = MenuSize.L.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true, AddOnType = addOnTypes[1]  },
 
                     // Fries
-                    new Menu { MenuName = "Bisaya Fries", MenuPrice = 2.49m, Category = categories[6], Size = MenuSize.R.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true   },
-                    new Menu { MenuName = "Bisaya Fries", MenuPrice = 3.49m, Category = categories[6], Size = MenuSize.M.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true  },
-                    new Menu { MenuName = "Bisaya Fries", MenuPrice = 4.49m, Category = categories[6], Size = MenuSize.L.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true  },
+                    new Menu { MenuName = "Rice", MenuPrice = 0.49m, Category = categories[6], HasDrink = false, HasAddOn = false, IsAddOn = true, AddOnType = addOnTypes[0] },
+                    new Menu { MenuName = "Bisaya Fries", MenuPrice = 2.49m, Category = categories[6], Size = MenuSize.R.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true, AddOnType = addOnTypes[0]   },
+                    new Menu { MenuName = "Bisaya Fries", MenuPrice = 3.49m, Category = categories[6], Size = MenuSize.M.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true, AddOnType = addOnTypes[0]  },
+                    new Menu { MenuName = "Bisaya Fries", MenuPrice = 4.49m, Category = categories[6], Size = MenuSize.L.ToString(), HasDrink = false, HasAddOn = false, IsAddOn = true, AddOnType = addOnTypes[0]  },
 
 
                 };

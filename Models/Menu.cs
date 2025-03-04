@@ -18,6 +18,7 @@ namespace EBISX_POS.API.Models
         public bool HasAddOn { get; set; } = true;
         public bool IsAddOn { get; set; } = false;
         public DrinkType? DrinkType { get; set; }
+        public AddOnType? AddOnType { get; set; }
         public required Category Category { get; set; }
     }
 }

@@ -16,6 +16,21 @@ namespace EBISX_POS.API.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "AddOnType",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    AddOnTypeName = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AddOnType", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Category",
                 columns: table => new
                 {
@@ -82,11 +97,17 @@ namespace EBISX_POS.API.Migrations
                     HasAddOn = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     IsAddOn = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     DrinkTypeId = table.Column<int>(type: "int", nullable: true),
+                    AddOnTypeId = table.Column<int>(type: "int", nullable: true),
                     CategoryId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Menu", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Menu_AddOnType_AddOnTypeId",
+                        column: x => x.AddOnTypeId,
+                        principalTable: "AddOnType",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Menu_Category_CategoryId",
                         column: x => x.CategoryId,
@@ -111,15 +132,23 @@ namespace EBISX_POS.API.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     TotalAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    UserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
+                    CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ManagerUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Order", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Order_User_UserEmail",
-                        column: x => x.UserEmail,
+                        name: "FK_Order_User_CashierUserEmail",
+                        column: x => x.CashierUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Order_User_ManagerUserEmail",
+                        column: x => x.ManagerUserEmail,
                         principalTable: "User",
                         principalColumn: "UserEmail",
                         onDelete: ReferentialAction.Cascade);
@@ -214,6 +243,11 @@ namespace EBISX_POS.API.Migrations
                 column: "OrderId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Menu_AddOnTypeId",
+                table: "Menu",
+                column: "AddOnTypeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Menu_CategoryId",
                 table: "Menu",
                 column: "CategoryId");
@@ -224,9 +258,14 @@ namespace EBISX_POS.API.Migrations
                 column: "DrinkTypeId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Order_UserEmail",
+                name: "IX_Order_CashierUserEmail",
                 table: "Order",
-                column: "UserEmail");
+                column: "CashierUserEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Order_ManagerUserEmail",
+                table: "Order",
+                column: "ManagerUserEmail");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Timestamp_UserEmail",
@@ -248,6 +287,9 @@ namespace EBISX_POS.API.Migrations
 
             migrationBuilder.DropTable(
                 name: "Order");
+
+            migrationBuilder.DropTable(
+                name: "AddOnType");
 
             migrationBuilder.DropTable(
                 name: "Category");

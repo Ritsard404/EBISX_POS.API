@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250304022941_EBISX_POS")]
+    [Migration("20250304062406_EBISX_POS")]
     partial class EBISX_POS
     {
         /// <inheritdoc />
@@ -24,6 +24,23 @@ namespace EBISX_POS.API.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
+
+            modelBuilder.Entity("EBISX_POS.API.Models.AddOnType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AddOnTypeName")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AddOnType");
+                });
 
             modelBuilder.Entity("EBISX_POS.API.Models.Category", b =>
                 {
@@ -109,6 +126,9 @@ namespace EBISX_POS.API.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AddOnTypeId")
+                        .HasColumnType("int");
+
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
@@ -142,6 +162,8 @@ namespace EBISX_POS.API.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AddOnTypeId");
+
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("DrinkTypeId");
@@ -157,8 +179,16 @@ namespace EBISX_POS.API.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CashierUserEmail")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ManagerUserEmail")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("OrderType")
                         .IsRequired()
@@ -167,13 +197,11 @@ namespace EBISX_POS.API.Migrations
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(65,30)");
 
-                    b.Property<string>("UserEmail")
-                        .IsRequired()
-                        .HasColumnType("varchar(255)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("UserEmail");
+                    b.HasIndex("CashierUserEmail");
+
+                    b.HasIndex("ManagerUserEmail");
 
                     b.ToTable("Order");
                 });
@@ -264,6 +292,10 @@ namespace EBISX_POS.API.Migrations
 
             modelBuilder.Entity("EBISX_POS.API.Models.Menu", b =>
                 {
+                    b.HasOne("EBISX_POS.API.Models.AddOnType", "AddOnType")
+                        .WithMany()
+                        .HasForeignKey("AddOnTypeId");
+
                     b.HasOne("EBISX_POS.API.Models.Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId")
@@ -274,6 +306,8 @@ namespace EBISX_POS.API.Migrations
                         .WithMany()
                         .HasForeignKey("DrinkTypeId");
 
+                    b.Navigation("AddOnType");
+
                     b.Navigation("Category");
 
                     b.Navigation("DrinkType");
@@ -281,13 +315,21 @@ namespace EBISX_POS.API.Migrations
 
             modelBuilder.Entity("EBISX_POS.API.Models.Order", b =>
                 {
-                    b.HasOne("EBISX_POS.API.Models.User", "User")
+                    b.HasOne("EBISX_POS.API.Models.User", "Cashier")
                         .WithMany()
-                        .HasForeignKey("UserEmail")
+                        .HasForeignKey("CashierUserEmail")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("User");
+                    b.HasOne("EBISX_POS.API.Models.User", "Manager")
+                        .WithMany()
+                        .HasForeignKey("ManagerUserEmail")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cashier");
+
+                    b.Navigation("Manager");
                 });
 
             modelBuilder.Entity("EBISX_POS.API.Models.Timestamp", b =>
