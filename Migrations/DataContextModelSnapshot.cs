@@ -134,8 +134,8 @@ namespace EBISX_POS.API.Migrations
                     b.Property<decimal>("MenuPrice")
                         .HasColumnType("decimal(65,30)");
 
-                    b.Property<int?>("Size")
-                        .HasColumnType("int");
+                    b.Property<string>("Size")
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 

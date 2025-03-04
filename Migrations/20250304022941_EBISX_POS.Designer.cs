@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250228024834_EBISX_POS_DATABASE")]
-    partial class EBISX_POS_DATABASE
+    [Migration("20250304022941_EBISX_POS")]
+    partial class EBISX_POS
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -137,8 +137,8 @@ namespace EBISX_POS.API.Migrations
                     b.Property<decimal>("MenuPrice")
                         .HasColumnType("decimal(65,30)");
 
-                    b.Property<int?>("Size")
-                        .HasColumnType("int");
+                    b.Property<string>("Size")
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 

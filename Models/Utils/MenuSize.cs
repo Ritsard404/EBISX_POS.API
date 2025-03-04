@@ -2,6 +2,6 @@
 {
     public enum MenuSize
     {
-        Regular, Medium, Large
+        R, M, L
     }
 }

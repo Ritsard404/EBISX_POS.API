@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace EBISX_POS.API.Migrations
 {
     /// <inheritdoc />
-    public partial class EBISX_POS_DATABASE : Migration
+    public partial class EBISX_POS : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -75,7 +75,8 @@ namespace EBISX_POS.API.Migrations
                     MenuPrice = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
                     MenuImagePath = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Size = table.Column<int>(type: "int", nullable: true),
+                    Size = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     MenuIsAvailable = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     HasDrink = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     HasAddOn = table.Column<bool>(type: "tinyint(1)", nullable: false),

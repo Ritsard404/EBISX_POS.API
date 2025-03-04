@@ -16,7 +16,7 @@ namespace EBISX_POS.API.Services.Repositories
         public async Task<List<Menu>> Menus(int ctgryId)
         {
             return await _dataContext.Menu
-                .Where(c => c.Category.Id == ctgryId)
+                .Where(c => c.Category.Id == ctgryId && c.MenuIsAvailable)
                 .Include(c => c.Category)
                 .Include(d => d.DrinkType)
                 .ToListAsync();
