@@ -28,6 +28,7 @@ namespace EBISX_POS.API.Services.Repositories
                     m.AddOnType.AddOnTypeName,
                     AddOn = new AddOnTypeDTO
                     {
+                        MenuId = m.Id,
                         MenuName = m.MenuName,
                         MenuImagePath = m.MenuImagePath,
                         Price = m.MenuPrice,
@@ -67,30 +68,48 @@ namespace EBISX_POS.API.Services.Repositories
                 return (new List<DrinkTypeWithDrinksDTO>(), new List<string>());
             }
 
-            // Get drinks for the given menuId and group by DrinkType
-            var drinks = await _dataContext.Menu
+            // Get menus for available drinks, including Size and Price.
+            var queryResults = await _dataContext.Menu
                 .Where(m => m.MenuIsAvailable && m.DrinkType != null)
                 .Select(m => new
                 {
-                    m.DrinkType!.Id,
-                    m.DrinkType.DrinkTypeName,
+                    DrinkTypeId = m.DrinkType.Id,
+                    DrinkTypeName = m.DrinkType.DrinkTypeName,
                     Drink = new DrinksDTO
                     {
+                        MenuId = m.Id,
                         MenuName = m.MenuName,
                         MenuImagePath = m.MenuImagePath,
-                    }
+                        MenuPrice = m.MenuPrice
+                    },
+                    Size = m.Size,
+                    Price = m.MenuPrice
                 })
                 .ToListAsync();
 
-            var groupedDrinks = drinks
-                .GroupBy(d => new { d.Id, d.DrinkTypeName })
+            // Group by DrinkType and project to our DTO.
+            var groupedDrinks = queryResults
+                .GroupBy(d => new { d.DrinkTypeId, d.DrinkTypeName })
                 .Select(g => new DrinkTypeWithDrinksDTO
                 {
-                    DrinkTypeId = g.Key.Id,
+                    DrinkTypeId = g.Key.DrinkTypeId,
                     DrinkTypeName = g.Key.DrinkTypeName,
-                    Drinks = g
-                        .GroupBy(d => d.Drink.MenuName)
-                        .Select(dg => dg.First().Drink)
+                    // For the list of drinks, group by drink name so duplicates are removed.
+                    //Drinks = g.GroupBy(x => x.Drink.MenuName)
+                    //          .Select(dg => dg.First().Drink)
+                    //          .ToList(),
+                    // Group by size to create SizesWithPrices list.
+                    SizesWithPrices = g
+                        .Where(x => !string.IsNullOrEmpty(x.Size))
+                        .GroupBy(x => x.Size)
+                        .Select(sizeGroup => new SizesWithPricesDTO
+                        {
+                            Size = sizeGroup.Key,
+                            Price = sizeGroup.First().Price, // representative price for that size
+                            Drinks = sizeGroup.Select(x => x.Drink)
+                                              .Distinct() // assuming DrinksDTO implements equality (or adjust as needed)
+                                              .ToList()
+                        })
                         .ToList()
                 })
                 .ToList();

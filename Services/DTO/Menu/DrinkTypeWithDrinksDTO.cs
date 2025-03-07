@@ -6,6 +6,7 @@ namespace EBISX_POS.API.Services.DTO.Menu
     {
         public int DrinkTypeId { get; set; }
         public string DrinkTypeName { get; set; }
-        public List<DrinksDTO> Drinks { get; set; } = new List<DrinksDTO>();
+        public List<SizesWithPricesDTO>? SizesWithPrices { get; set; } = new List<SizesWithPricesDTO>();
+
     }
 }

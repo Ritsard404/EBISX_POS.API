@@ -2,6 +2,7 @@
 {
     public class AddOnTypeDTO
     {
+        public int MenuId { get; set; }
         public required string MenuName { get; set; }
         public string? MenuImagePath { get; set; }
         public string? Size { get; set; }
