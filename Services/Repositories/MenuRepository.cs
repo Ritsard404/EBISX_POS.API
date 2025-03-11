@@ -16,7 +16,7 @@ namespace EBISX_POS.API.Services.Repositories
             // If no add-ons found, return empty lists
             if (menuExist == null)
             {
-                return (new List<AddOnTypeWithAddOnsDTO>());
+                return new List<AddOnTypeWithAddOnsDTO>();
             }
 
             // Get add-ons for the given menuId and group by AddOnType
@@ -43,21 +43,48 @@ namespace EBISX_POS.API.Services.Repositories
                 {
                     AddOnTypeId = g.Key.Id,
                     AddOnTypeName = g.Key.AddOnTypeName,
-                    AddOns = g
-                        .Select(a => a.AddOn)
-                        .ToList()
+                    AddOns = g.Select(a => a.AddOn).ToList()
                 })
                 .ToList();
 
-            return (groupedAddOns);
+            // For each add-on type group, further group by MenuName
+            // and subtract the price of the regular size ("R") from the other sizes.
+            foreach (var addOnTypeGroup in groupedAddOns)
+            {
+                // Group by the add-on's name
+                var addOnsByName = addOnTypeGroup.AddOns.GroupBy(a => a.MenuName);
+                foreach (var nameGroup in addOnsByName)
+                {
+                    // Find the regular add-on (Size == "R") if it exists
+                    var regularAddOn = nameGroup.FirstOrDefault(a =>
+                        string.Equals(a.Size, "R", StringComparison.OrdinalIgnoreCase));
+
+                    if (regularAddOn != null)
+                    {
+                        decimal regularPrice = regularAddOn.Price ?? 0m;
+                        regularAddOn.Price = 0m; // Set the regular price to 0
+
+                        foreach (var addOn in nameGroup)
+                        {
+                            // Only adjust non-regular sizes
+                            if (!string.Equals(addOn.Size, "R", StringComparison.OrdinalIgnoreCase))
+                            {
+                                addOn.Price = addOn.Price - regularPrice;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return groupedAddOns;
         }
+
 
         public async Task<List<Category>> Categories()
         {
             return await _dataContext.Category
                 .ToListAsync();
         }
-
         public async Task<(List<DrinkTypeWithDrinksDTO>, List<string>)> Drinks(int menuId)
         {
             var menuExists = await _dataContext.Menu
@@ -69,12 +96,14 @@ namespace EBISX_POS.API.Services.Repositories
             }
 
             // Get menus for available drinks, including Size and Price.
+            // Also include DrinkName for grouping.
             var queryResults = await _dataContext.Menu
                 .Where(m => m.MenuIsAvailable && m.DrinkType != null)
                 .Select(m => new
                 {
                     DrinkTypeId = m.DrinkType.Id,
                     DrinkTypeName = m.DrinkType.DrinkTypeName,
+                    DrinkName = m.MenuName, // for grouping by drink name
                     Drink = new DrinksDTO
                     {
                         MenuId = m.Id,
@@ -87,34 +116,67 @@ namespace EBISX_POS.API.Services.Repositories
                 })
                 .ToListAsync();
 
-            // Group by DrinkType and project to our DTO.
-            var groupedDrinks = queryResults
-                .GroupBy(d => new { d.DrinkTypeId, d.DrinkTypeName })
+            // Adjust prices: for each drink name group, use the regular (Size "R") drink's price
+            // as the base. Set the regular drink's price to 0 and subtract that value from the others.
+            var adjustedResults = queryResults
+                .GroupBy(x => new { x.DrinkTypeId, x.DrinkTypeName })
+                .SelectMany(g =>
+                    g.GroupBy(x => x.DrinkName)
+                     .SelectMany(drinkGroup =>
+                     {
+                         // Find the regular drink (Size == "R") if it exists.
+                         var regular = drinkGroup.FirstOrDefault(x =>
+                             string.Equals(x.Size, "R", StringComparison.OrdinalIgnoreCase));
+                         decimal regularPrice = regular?.Price ?? 0m;
+
+                         return drinkGroup.Select(x => new
+                         {
+                             x.DrinkTypeId,
+                             x.DrinkTypeName,
+                             // Adjust the price: if the drink is regular, price becomes 0;
+                             // otherwise, subtract the regular price.
+                             Drink = new DrinksDTO
+                             {
+                                 MenuId = x.Drink.MenuId,
+                                 MenuName = x.Drink.MenuName,
+                                 MenuImagePath = x.Drink.MenuImagePath,
+                                 MenuPrice = string.Equals(x.Size, "R", StringComparison.OrdinalIgnoreCase)
+                                                 ? 0m
+                                                 : x.Price - regularPrice,
+                                 Size = x.Size
+                             },
+                             x.Size,
+                             Price = string.Equals(x.Size, "R", StringComparison.OrdinalIgnoreCase)
+                                         ? 0m
+                                         : x.Price - regularPrice
+                         });
+                     }))
+                .ToList();
+
+            // Group the adjusted results by DrinkType and then by Size
+            var groupedDrinks = adjustedResults
+                .GroupBy(x => new { x.DrinkTypeId, x.DrinkTypeName })
                 .Select(g => new DrinkTypeWithDrinksDTO
                 {
                     DrinkTypeId = g.Key.DrinkTypeId,
                     DrinkTypeName = g.Key.DrinkTypeName,
-                    // For the list of drinks, group by drink name so duplicates are removed.
-                    //Drinks = g.GroupBy(x => x.Drink.MenuName)
-                    //          .Select(dg => dg.First().Drink)
-                    //          .ToList(),
-                    // Group by size to create SizesWithPrices list.
                     SizesWithPrices = g
                         .Where(x => !string.IsNullOrEmpty(x.Size))
                         .GroupBy(x => x.Size)
                         .Select(sizeGroup => new SizesWithPricesDTO
                         {
                             Size = sizeGroup.Key,
-                            Price = sizeGroup.First().Price, // representative price for that size
+                            // If needed, you can set a representative price here.
+                            // Price = sizeGroup.First().Price,
                             Drinks = sizeGroup.Select(x => x.Drink)
-                                              .Distinct() // assuming DrinksDTO implements equality (or adjust as needed)
+                                              .Distinct() // Ensure distinct drinks (make sure DrinksDTO implements equality)
                                               .ToList()
                         })
                         .ToList()
                 })
                 .ToList();
 
-            // Get distinct drink sizes (safe to use Distinct since it's a simple string)
+            // Get distinct drink sizes.
             var sizes = await _dataContext.Menu
                 .Where(d => d.DrinkType != null && d.MenuIsAvailable && !string.IsNullOrEmpty(d.Size))
                 .Select(d => d.Size!)
@@ -123,6 +185,7 @@ namespace EBISX_POS.API.Services.Repositories
 
             return (groupedDrinks, sizes);
         }
+
 
         public async Task<List<Menu>> Menus(int ctgryId)
         {
