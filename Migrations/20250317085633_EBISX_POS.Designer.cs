@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250304062406_EBISX_POS")]
+    [Migration("20250317085633_EBISX_POS")]
     partial class EBISX_POS
     {
         /// <inheritdoc />
@@ -90,26 +90,37 @@ namespace EBISX_POS.API.Migrations
                     b.Property<int?>("DrinksId")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("ItemPrice")
+                    b.Property<bool>("IsVoid")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<decimal?>("ItemPrice")
                         .HasColumnType("decimal(65,30)");
 
-                    b.Property<int>("ItemQTY")
+                    b.Property<int?>("ItemQTY")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("ItemSubTotal")
-                        .HasColumnType("decimal(65,30)");
+                    b.Property<int?>("MealId")
+                        .HasColumnType("int");
 
-                    b.Property<int>("MenuId")
+                    b.Property<int?>("MenuId")
                         .HasColumnType("int");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("VoidedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTimeOffset>("createdAt")
+                        .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("AddOnId");
 
                     b.HasIndex("DrinksId");
+
+                    b.HasIndex("MealId");
 
                     b.HasIndex("MenuId");
 
@@ -186,8 +197,13 @@ namespace EBISX_POS.API.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsPending")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("ManagerUserEmail")
-                        .IsRequired()
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("OrderType")
@@ -214,6 +230,23 @@ namespace EBISX_POS.API.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CashierUserEmail")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ManagerBreakInUserEmail")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ManagerBreakOutUserEmail")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ManagerInUserEmail")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ManagerOutUserEmail")
+                        .HasColumnType("varchar(255)");
+
                     b.Property<DateTimeOffset?>("TsBreakIn")
                         .HasColumnType("datetime(6)");
 
@@ -226,13 +259,17 @@ namespace EBISX_POS.API.Migrations
                     b.Property<DateTimeOffset?>("TsOut")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("UserEmail")
-                        .IsRequired()
-                        .HasColumnType("varchar(255)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("UserEmail");
+                    b.HasIndex("CashierUserEmail");
+
+                    b.HasIndex("ManagerBreakInUserEmail");
+
+                    b.HasIndex("ManagerBreakOutUserEmail");
+
+                    b.HasIndex("ManagerInUserEmail");
+
+                    b.HasIndex("ManagerOutUserEmail");
 
                     b.ToTable("Timestamp");
                 });
@@ -241,6 +278,9 @@ namespace EBISX_POS.API.Migrations
                 {
                     b.Property<string>("UserEmail")
                         .HasColumnType("varchar(255)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<string>("UserFName")
                         .IsRequired()
@@ -269,14 +309,16 @@ namespace EBISX_POS.API.Migrations
                         .WithMany()
                         .HasForeignKey("DrinksId");
 
+                    b.HasOne("EBISX_POS.API.Models.Item", "Meal")
+                        .WithMany()
+                        .HasForeignKey("MealId");
+
                     b.HasOne("EBISX_POS.API.Models.Menu", "Menu")
                         .WithMany()
-                        .HasForeignKey("MenuId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("MenuId");
 
                     b.HasOne("EBISX_POS.API.Models.Order", "Order")
-                        .WithMany()
+                        .WithMany("Items")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -284,6 +326,8 @@ namespace EBISX_POS.API.Migrations
                     b.Navigation("AddOn");
 
                     b.Navigation("Drinks");
+
+                    b.Navigation("Meal");
 
                     b.Navigation("Menu");
 
@@ -323,9 +367,7 @@ namespace EBISX_POS.API.Migrations
 
                     b.HasOne("EBISX_POS.API.Models.User", "Manager")
                         .WithMany()
-                        .HasForeignKey("ManagerUserEmail")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ManagerUserEmail");
 
                     b.Navigation("Cashier");
 
@@ -334,13 +376,44 @@ namespace EBISX_POS.API.Migrations
 
             modelBuilder.Entity("EBISX_POS.API.Models.Timestamp", b =>
                 {
-                    b.HasOne("EBISX_POS.API.Models.User", "User")
+                    b.HasOne("EBISX_POS.API.Models.User", "Cashier")
                         .WithMany()
-                        .HasForeignKey("UserEmail")
+                        .HasForeignKey("CashierUserEmail")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("User");
+                    b.HasOne("EBISX_POS.API.Models.User", "ManagerBreakIn")
+                        .WithMany()
+                        .HasForeignKey("ManagerBreakInUserEmail");
+
+                    b.HasOne("EBISX_POS.API.Models.User", "ManagerBreakOut")
+                        .WithMany()
+                        .HasForeignKey("ManagerBreakOutUserEmail");
+
+                    b.HasOne("EBISX_POS.API.Models.User", "ManagerIn")
+                        .WithMany()
+                        .HasForeignKey("ManagerInUserEmail")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EBISX_POS.API.Models.User", "ManagerOut")
+                        .WithMany()
+                        .HasForeignKey("ManagerOutUserEmail");
+
+                    b.Navigation("Cashier");
+
+                    b.Navigation("ManagerBreakIn");
+
+                    b.Navigation("ManagerBreakOut");
+
+                    b.Navigation("ManagerIn");
+
+                    b.Navigation("ManagerOut");
+                });
+
+            modelBuilder.Entity("EBISX_POS.API.Models.Order", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

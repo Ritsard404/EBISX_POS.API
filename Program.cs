@@ -28,6 +28,7 @@ builder.Services.AddDbContext<DataContext>(options =>
 // Add Scope of Interface and Repository
 builder.Services.AddScoped<IAuth, AuthRepository>();
 builder.Services.AddScoped<IMenu, MenuRepository>();
+builder.Services.AddScoped<IOrder, OrderRepository>();
 
 // Add CORS
 builder.Services.AddCors(options =>

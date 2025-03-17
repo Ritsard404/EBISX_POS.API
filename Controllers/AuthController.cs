@@ -39,7 +39,7 @@ namespace EBISX_POS.API.Controllers
                 HttpOnly = true,  // Prevents JavaScript access (Prevents XSS)
                 Secure = true,    // Only send cookie over HTTPS
                 SameSite = SameSiteMode.Strict, // Restricts cross-site requests
-                Expires = DateTimeOffset.Now.AddDays(1) // Cookie expires in 8 hours
+                Expires = DateTimeOffset.Now.AddDays(1) 
             });
 
             return Ok(new { cashierName });

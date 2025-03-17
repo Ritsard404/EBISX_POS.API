@@ -1,4 +1,6 @@
-﻿using System;
+﻿
+
+using System;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -71,7 +73,8 @@ namespace EBISX_POS.API.Migrations
                     UserLName = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     UserRole = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4")
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IsActive = table.Column<bool>(type: "tinyint(1)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -132,9 +135,11 @@ namespace EBISX_POS.API.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     TotalAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    IsCancelled = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    IsPending = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    ManagerUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
+                    ManagerUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
@@ -150,8 +155,7 @@ namespace EBISX_POS.API.Migrations
                         name: "FK_Order_User_ManagerUserEmail",
                         column: x => x.ManagerUserEmail,
                         principalTable: "User",
-                        principalColumn: "UserEmail",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "UserEmail");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -165,18 +169,47 @@ namespace EBISX_POS.API.Migrations
                     TsOut = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     TsBreakOut = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     TsBreakIn = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    UserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
+                    CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ManagerInUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ManagerOutUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ManagerBreakInUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ManagerBreakOutUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Timestamp", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Timestamp_User_UserEmail",
-                        column: x => x.UserEmail,
+                        name: "FK_Timestamp_User_CashierUserEmail",
+                        column: x => x.CashierUserEmail,
                         principalTable: "User",
                         principalColumn: "UserEmail",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Timestamp_User_ManagerBreakInUserEmail",
+                        column: x => x.ManagerBreakInUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail");
+                    table.ForeignKey(
+                        name: "FK_Timestamp_User_ManagerBreakOutUserEmail",
+                        column: x => x.ManagerBreakOutUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail");
+                    table.ForeignKey(
+                        name: "FK_Timestamp_User_ManagerInUserEmail",
+                        column: x => x.ManagerInUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Timestamp_User_ManagerOutUserEmail",
+                        column: x => x.ManagerOutUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -186,17 +219,25 @@ namespace EBISX_POS.API.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    ItemQTY = table.Column<int>(type: "int", nullable: false),
-                    ItemPrice = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
-                    ItemSubTotal = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
-                    MenuId = table.Column<int>(type: "int", nullable: false),
+                    ItemQTY = table.Column<int>(type: "int", nullable: true),
+                    ItemPrice = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
+                    IsVoid = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    MenuId = table.Column<int>(type: "int", nullable: true),
                     DrinksId = table.Column<int>(type: "int", nullable: true),
                     AddOnId = table.Column<int>(type: "int", nullable: true),
-                    OrderId = table.Column<int>(type: "int", nullable: false)
+                    MealId = table.Column<int>(type: "int", nullable: true),
+                    OrderId = table.Column<int>(type: "int", nullable: false),
+                    createdAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    VoidedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Item", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Item_Item_MealId",
+                        column: x => x.MealId,
+                        principalTable: "Item",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Item_Menu_AddOnId",
                         column: x => x.AddOnId,
@@ -211,8 +252,7 @@ namespace EBISX_POS.API.Migrations
                         name: "FK_Item_Menu_MenuId",
                         column: x => x.MenuId,
                         principalTable: "Menu",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Item_Order_OrderId",
                         column: x => x.OrderId,
@@ -231,6 +271,11 @@ namespace EBISX_POS.API.Migrations
                 name: "IX_Item_DrinksId",
                 table: "Item",
                 column: "DrinksId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Item_MealId",
+                table: "Item",
+                column: "MealId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Item_MenuId",
@@ -268,9 +313,29 @@ namespace EBISX_POS.API.Migrations
                 column: "ManagerUserEmail");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Timestamp_UserEmail",
+                name: "IX_Timestamp_CashierUserEmail",
                 table: "Timestamp",
-                column: "UserEmail");
+                column: "CashierUserEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Timestamp_ManagerBreakInUserEmail",
+                table: "Timestamp",
+                column: "ManagerBreakInUserEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Timestamp_ManagerBreakOutUserEmail",
+                table: "Timestamp",
+                column: "ManagerBreakOutUserEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Timestamp_ManagerInUserEmail",
+                table: "Timestamp",
+                column: "ManagerInUserEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Timestamp_ManagerOutUserEmail",
+                table: "Timestamp",
+                column: "ManagerOutUserEmail");
         }
 
         /// <inheritdoc />

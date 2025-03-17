@@ -19,16 +19,16 @@ namespace EBISX_POS.API.Data
         public DbSet<AddOnType> AddOnType { get; set; }
 
         // ✅ Auto-calculate subtotal before saving
-        public override int SaveChanges()
-        {
-            foreach (var entry in ChangeTracker.Entries<Item>())
-            {
-                if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
-                {
-                    entry.Entity.ItemSubTotal = (decimal)entry.Entity.ItemQTY * entry.Entity.ItemPrice;
-                }
-            }
-            return base.SaveChanges();
-        }
+        //public override int SaveChanges()
+        //{
+        //    foreach (var entry in ChangeTracker.Entries<Item>())
+        //    {
+        //        if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
+        //        {
+        //            entry.Entity.ItemSubTotal = (decimal)entry.Entity.ItemQTY * entry.Entity.ItemPrice;
+        //        }
+        //    }
+        //    return base.SaveChanges();
+        //}
     }
 }
