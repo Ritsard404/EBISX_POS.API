@@ -84,7 +84,7 @@ namespace EBISX_POS.API.Migrations
                     b.Property<int?>("AddOnId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("DrinksId")
+                    b.Property<int?>("DrinkId")
                         .HasColumnType("int");
 
                     b.Property<bool>("IsVoid")
@@ -115,7 +115,7 @@ namespace EBISX_POS.API.Migrations
 
                     b.HasIndex("AddOnId");
 
-                    b.HasIndex("DrinksId");
+                    b.HasIndex("DrinkId");
 
                     b.HasIndex("MealId");
 
@@ -302,9 +302,9 @@ namespace EBISX_POS.API.Migrations
                         .WithMany()
                         .HasForeignKey("AddOnId");
 
-                    b.HasOne("EBISX_POS.API.Models.Menu", "Drinks")
+                    b.HasOne("EBISX_POS.API.Models.Menu", "Drink")
                         .WithMany()
-                        .HasForeignKey("DrinksId");
+                        .HasForeignKey("DrinkId");
 
                     b.HasOne("EBISX_POS.API.Models.Item", "Meal")
                         .WithMany()
@@ -322,7 +322,7 @@ namespace EBISX_POS.API.Migrations
 
                     b.Navigation("AddOn");
 
-                    b.Navigation("Drinks");
+                    b.Navigation("Drink");
 
                     b.Navigation("Meal");
 

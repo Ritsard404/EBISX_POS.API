@@ -1,6 +1,4 @@
-﻿
-
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -223,7 +221,7 @@ namespace EBISX_POS.API.Migrations
                     ItemPrice = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
                     IsVoid = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     MenuId = table.Column<int>(type: "int", nullable: true),
-                    DrinksId = table.Column<int>(type: "int", nullable: true),
+                    DrinkId = table.Column<int>(type: "int", nullable: true),
                     AddOnId = table.Column<int>(type: "int", nullable: true),
                     MealId = table.Column<int>(type: "int", nullable: true),
                     OrderId = table.Column<int>(type: "int", nullable: false),
@@ -244,8 +242,8 @@ namespace EBISX_POS.API.Migrations
                         principalTable: "Menu",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_Item_Menu_DrinksId",
-                        column: x => x.DrinksId,
+                        name: "FK_Item_Menu_DrinkId",
+                        column: x => x.DrinkId,
                         principalTable: "Menu",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -268,9 +266,9 @@ namespace EBISX_POS.API.Migrations
                 column: "AddOnId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Item_DrinksId",
+                name: "IX_Item_DrinkId",
                 table: "Item",
-                column: "DrinksId");
+                column: "DrinkId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Item_MealId",

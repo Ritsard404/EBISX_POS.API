@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250317085633_EBISX_POS")]
+    [Migration("20250318025916_EBISX_POS")]
     partial class EBISX_POS
     {
         /// <inheritdoc />
@@ -87,7 +87,7 @@ namespace EBISX_POS.API.Migrations
                     b.Property<int?>("AddOnId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("DrinksId")
+                    b.Property<int?>("DrinkId")
                         .HasColumnType("int");
 
                     b.Property<bool>("IsVoid")
@@ -118,7 +118,7 @@ namespace EBISX_POS.API.Migrations
 
                     b.HasIndex("AddOnId");
 
-                    b.HasIndex("DrinksId");
+                    b.HasIndex("DrinkId");
 
                     b.HasIndex("MealId");
 
@@ -305,9 +305,9 @@ namespace EBISX_POS.API.Migrations
                         .WithMany()
                         .HasForeignKey("AddOnId");
 
-                    b.HasOne("EBISX_POS.API.Models.Menu", "Drinks")
+                    b.HasOne("EBISX_POS.API.Models.Menu", "Drink")
                         .WithMany()
-                        .HasForeignKey("DrinksId");
+                        .HasForeignKey("DrinkId");
 
                     b.HasOne("EBISX_POS.API.Models.Item", "Meal")
                         .WithMany()
@@ -325,7 +325,7 @@ namespace EBISX_POS.API.Migrations
 
                     b.Navigation("AddOn");
 
-                    b.Navigation("Drinks");
+                    b.Navigation("Drink");
 
                     b.Navigation("Meal");
 

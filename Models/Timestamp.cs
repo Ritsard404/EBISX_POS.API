@@ -23,7 +23,7 @@ namespace EBISX_POS.API.Models
 
         // The cashier associated with this timestamp record (required).
         [Required]
-        public required User Cashier { get; set; }
+        public required virtual User Cashier { get; set; }
 
         // The manager who authorized the clock-in (required).
         [Required]
