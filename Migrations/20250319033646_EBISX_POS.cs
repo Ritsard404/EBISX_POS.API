@@ -217,6 +217,7 @@ namespace EBISX_POS.API.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    EntryId = table.Column<long>(type: "bigint", nullable: true),
                     ItemQTY = table.Column<int>(type: "int", nullable: true),
                     ItemPrice = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
                     IsVoid = table.Column<bool>(type: "tinyint(1)", nullable: false),

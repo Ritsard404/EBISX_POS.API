@@ -6,6 +6,7 @@ namespace EBISX_POS.API.Models
     {
         [Key]
         public int Id { get; set; }
+        public long? EntryId { get; set; }
         public int? ItemQTY { get; set; }
         public decimal? ItemPrice { get; set; }
         public bool IsVoid { get; set; } = false;

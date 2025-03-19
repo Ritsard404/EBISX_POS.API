@@ -87,6 +87,9 @@ namespace EBISX_POS.API.Migrations
                     b.Property<int?>("DrinkId")
                         .HasColumnType("int");
 
+                    b.Property<long?>("EntryId")
+                        .HasColumnType("bigint");
+
                     b.Property<bool>("IsVoid")
                         .HasColumnType("tinyint(1)");
 

@@ -92,7 +92,7 @@ namespace EBISX_POS.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetCurrentOrderItemsDTOs()
+        public async Task<IActionResult> GetCurrentOrderItems()
         {
             //// Retrieve cashier email from cookies (if enabled)
             //string? cashierEmail = Request.Cookies["CashierEmail"];
@@ -107,7 +107,7 @@ namespace EBISX_POS.API.Controllers
             string cashierEmail = "user2@example.com";
 
             // Get current order items using cashierEmail
-            var currentOrderItems = await _order.GetCurrentOrderItemsDTOs(cashierEmail);
+            var currentOrderItems = await _order.GetCurrentOrderItems(cashierEmail);
 
             // Return the list (empty if no items found)
             return Ok(currentOrderItems);

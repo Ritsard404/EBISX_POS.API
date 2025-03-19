@@ -2,23 +2,24 @@
 {
     public class GetCurrentOrderItemsDTO
     {
-        // ✅ List of sub-orders (individual items in the order)
+        // List of sub-orders (individual items in the order)
+        public long EntryId { get; set; }
         public List<CurrentOrderItemsSubOrder>? SubOrders { get; set; }
 
-        // ✅ Additional properties to display order summary (if needed)
-        public int TotalQuantity => SubOrders?.Sum(s => s.Quantity) ?? 0;
+        // Additional properties to display order summary (if needed)
+        public int TotalQuantity => SubOrders?.FirstOrDefault()?.Quantity ?? 0;
         public decimal TotalPrice => SubOrders?.Sum(s => s.ItemSubTotal) ?? 0;
         public bool HasCurrentOrder => SubOrders != null && SubOrders.Any();
     }
 
     public class CurrentOrderItemsSubOrder
     {
-        // ✅ Unique item identifiers
+        // Unique item identifiers
         public int? MenuId { get; set; }
         public int? DrinkId { get; set; }
         public int? AddOnId { get; set; }
 
-        // ✅ Item details
+        // Item details
         public string Name { get; set; } = string.Empty;
         public string? Size { get; set; }
         public decimal ItemPrice { get; set; }

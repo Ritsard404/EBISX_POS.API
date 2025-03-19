@@ -4,7 +4,7 @@ namespace EBISX_POS.API.Services.DTO.Order
 {
     public class VoidOrderItemDTO
     {
-        public int itemId { get; set; }
+        public long entryId { get; set; }
         public required string managerEmail { get; set; }
 
         [JsonIgnore]

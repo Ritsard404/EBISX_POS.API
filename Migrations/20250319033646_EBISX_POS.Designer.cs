@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250318025916_EBISX_POS")]
+    [Migration("20250319033646_EBISX_POS")]
     partial class EBISX_POS
     {
         /// <inheritdoc />
@@ -89,6 +89,9 @@ namespace EBISX_POS.API.Migrations
 
                     b.Property<int?>("DrinkId")
                         .HasColumnType("int");
+
+                    b.Property<long?>("EntryId")
+                        .HasColumnType("bigint");
 
                     b.Property<bool>("IsVoid")
                         .HasColumnType("tinyint(1)");

@@ -10,6 +10,6 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<(bool, string)> VoidOrderItem(VoidOrderItemDTO voidOrder);
         Task<(bool, string)> EditQtyOrderItem(EditOrderItemQuantityDTO editOrder);
 
-        Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItemsDTOs(string cashierEmail);
+        Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string cashierEmail);
     }
 }

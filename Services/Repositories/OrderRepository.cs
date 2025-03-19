@@ -115,7 +115,7 @@ namespace EBISX_POS.API.Services.Repositories
             AddVoidItem(addOn, voidOrder.addOnPrice > 0 ? voidOrder.addOnPrice : addOn?.MenuPrice, mealItem, isAddOn: true);
 
             // ✅ Update total order amount
-            currentOrder.TotalAmount += totalAmount;
+            //currentOrder.TotalAmount += totalAmount;
 
             // ✅ Save changes to database
             await _dataContext.SaveChangesAsync();
@@ -175,33 +175,38 @@ namespace EBISX_POS.API.Services.Repositories
                 await _dataContext.Order.AddAsync(currentOrder);
             }
 
+            // ✅ Track total amount of add items
             decimal totalAmount = 0m;
 
-            void AddItem(Menu? item, decimal? customPrice = null, Item? parentMeal = null)
+            // ✅ Add add items efficiently
+            void AddVoidItem(Menu? item, decimal? customPrice = null, Item? parentMeal = null, bool isDrink = false, bool isAddOn = false)
             {
                 if (item == null) return;
 
-                var newItem = new Item
+                var addItem = new Item
                 {
                     ItemQTY = addOrder.qty,
+                    EntryId = parentMeal == null ? addOrder.entryId : null,
                     ItemPrice = customPrice ?? item.MenuPrice,
-                    Menu = parentMeal == null ? item : null,
-                    Drink = parentMeal == null && item == drink ? item : null,
-                    AddOn = parentMeal == null && item == addOn ? item : null,
+                    Menu = !isDrink && !isAddOn && parentMeal == null ? item : null,
+                    Drink = isDrink ? item : null,
+                    AddOn = isAddOn ? item : null,
                     Meal = parentMeal,
-                    Order = currentOrder
+                    Order = currentOrder,
                 };
 
-                currentOrder.Items.Add(newItem);
-                totalAmount += (newItem.ItemPrice ?? 0m) * (newItem.ItemQTY ?? 1);
+                currentOrder.Items.Add(addItem);
+                totalAmount += (addItem.ItemPrice ?? 0m) * (addItem.ItemQTY ?? 1);
             }
 
+            // Add Menu (can have drink/addOn linked)
             var mealItem = menu != null ? new Item
             {
                 ItemQTY = addOrder.qty,
+                EntryId = addOrder.entryId,
                 ItemPrice = menu.MenuPrice,
                 Menu = menu,
-                Order = currentOrder
+                Order = currentOrder,
             } : null;
 
             if (mealItem != null)
@@ -210,9 +215,11 @@ namespace EBISX_POS.API.Services.Repositories
                 totalAmount += (mealItem.ItemPrice ?? 0m) * (mealItem.ItemQTY ?? 1);
             }
 
-            AddItem(drink, addOrder.drinkPrice > 0 ? addOrder.drinkPrice : drink?.MenuPrice, mealItem);
-            AddItem(addOn, addOrder.addOnPrice > 0 ? addOrder.addOnPrice : addOn?.MenuPrice, mealItem);
+            // Add Drink and AddOn (linked to meal if applicable)
+            AddVoidItem(drink, addOrder.drinkPrice, mealItem, isDrink: true);
+            AddVoidItem(addOn, addOrder.addOnPrice, mealItem, isAddOn: true);
 
+            // Update the order's TotalAmount with the computed total
             currentOrder.TotalAmount += totalAmount;
 
             await _dataContext.SaveChangesAsync();
@@ -230,18 +237,19 @@ namespace EBISX_POS.API.Services.Repositories
                 return (false, "Cashier not found.");
             }
 
-            // Fetch the item with the associated order
+            // Fetch the item with the associated order and meal (if any)
             var item = await _dataContext.Item
                 .Include(i => i.Order)
+                    .ThenInclude(o => o.Items)
                 .Include(i => i.Meal)
                 .FirstOrDefaultAsync(i =>
-                    i.Id == editOrder.itemId &&
+                    i.EntryId == editOrder.entryId &&
                     i.Order.Cashier.UserEmail == editOrder.cashierEmail &&
                     i.Order.IsPending &&
                     !i.IsVoid
                 );
 
-            //  Return if item is not found or voided
+            // Return if item is not found or cannot be modified
             if (item == null)
             {
                 return (false, "Item not found or cannot be modified.");
@@ -253,19 +261,13 @@ namespace EBISX_POS.API.Services.Repositories
                 return (false, "Quantity must be greater than zero.");
             }
 
-            // Update item quantity and adjust total amount
-            int oldQty = item.ItemQTY ?? 1;
-            decimal itemPrice = item.ItemPrice ?? 0m;
-
+            // Update the main item's quantity
             item.ItemQTY = editOrder.qty;
 
-            // Recalculate the total amount in the order
-            item.Order.TotalAmount += (itemPrice * (editOrder.qty - oldQty));
-
-            // Check if the item is a parent (Meal)
+            // If the item is a parent (i.e. not a child item, indicated by Meal being null),
+            // update the quantities for its child items as well.
             if (item.Meal == null)
             {
-                // Update child items if the item is a parent
                 var childItems = await _dataContext.Item
                     .Where(i => i.Meal != null && i.Meal.Id == item.Id && !i.IsVoid)
                     .ToListAsync();
@@ -273,60 +275,74 @@ namespace EBISX_POS.API.Services.Repositories
                 foreach (var childItem in childItems)
                 {
                     childItem.ItemQTY = editOrder.qty;
-                    item.Order.TotalAmount += (childItem.ItemPrice ?? 0m) * (editOrder.qty - oldQty);
                 }
             }
 
-            // Save changes to the database
+            // Recalculate the order's total amount from scratch:
+            var order = item.Order;
+            order.TotalAmount = order.Items
+                .Where(i => !i.IsVoid)
+                .Sum(i => (i.ItemPrice ?? 0m) * (i.ItemQTY ?? 1));
+
             await _dataContext.SaveChangesAsync();
 
             return (true, $"Quantity updated to {editOrder.qty}.");
         }
 
-
-        public async Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItemsDTOs(string cashierEmail)
+        public async Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string cashierEmail)
         {
-            // Check if the cashier is valid and active
+            // Validate the cashier.
             var cashier = await _dataContext.User
                 .FirstOrDefaultAsync(u => u.UserEmail == cashierEmail && u.IsActive);
+            if (cashier == null)
+            {
+                return new List<GetCurrentOrderItemsDTO>();
+            }
 
-            // Return an empty list if no cashier is found
-            if (cashier == null) return new List<GetCurrentOrderItemsDTO>();
-
-            // Retrieve all pending orders for the cashier with related items
-            var currentOrderItems = await _dataContext.Order
+            // Fetch all non-voided items from pending orders for the cashier,
+            // including related entities needed for the DTO.
+            var items = await _dataContext.Order
                 .Include(o => o.Items)
-                    .ThenInclude(i => i.Menu)
-                .Include(o => o.Items)
-                    .ThenInclude(i => i.Drink)
-                .Include(o => o.Items)
-                    .ThenInclude(i => i.AddOn)
-                .Include(o => o.Cashier)
                 .Where(o => o.IsPending &&
                             o.Cashier != null &&
                             o.Cashier.UserEmail == cashierEmail &&
                             o.Cashier.IsActive)
-                .Select(o => new GetCurrentOrderItemsDTO
-                {
-                    SubOrders = o.Items
-                        .Where(i => !i.IsVoid) // Exclude voided items
-                        .Select(i => new CurrentOrderItemsSubOrder
-                        {
-                            MenuId =i.Menu.Id,
-                            DrinkId = i.Drink.Id,
-                            AddOnId = i.AddOn.Id,
-                            Name = i.Menu.MenuName,
-                            Size = i.Menu.Size,
-                            ItemPrice = i.ItemPrice ?? 0m,
-                            Quantity = i.ItemQTY ?? 1,
-                            IsFirstItem = i.Meal == null // True for main item
-                        })
-                        .ToList()
-                })
+                .SelectMany(o => o.Items)
+                .Where(i => !i.IsVoid)
+                .Include(i => i.Menu)
+                .Include(i => i.Drink)
+                .Include(i => i.AddOn)
+                .Include(i => i.Meal)
                 .ToListAsync();
 
-            // Return the list of DTOs
-            return currentOrderItems;
+            // Group items by EntryId.
+            // For items with no EntryId (child meals), use the parent's EntryId from the Meal property.
+            var groupedItems = items
+                .GroupBy(i => i.EntryId ?? i.Meal?.EntryId)
+                .OrderBy(g => g.Min(i => i.createdAt))
+                .Select(g => new GetCurrentOrderItemsDTO
+                {
+                    // Use the group's key or 0 if still null.
+                    EntryId = g.Key ?? 0,
+                    // Order each group so that the parent (Meal == null) comes first.
+                    SubOrders = g.OrderBy(i => i.Meal == null ? 0 : 1)
+                                 .Select(i => new CurrentOrderItemsSubOrder
+                                 {
+                                     MenuId = i.Menu?.Id,
+                                     DrinkId = i.Drink?.Id,
+                                     AddOnId = i.AddOn?.Id,
+                                     // Fallback: use Menu name first, then Drink, then AddOn.
+                                     Name = i.Menu?.MenuName ?? i.Drink?.MenuName ?? i.AddOn?.MenuName ?? "Unknown",
+                                     Size = i.Menu?.Size ?? i.Drink?.Size ?? i.AddOn?.Size,
+                                     ItemPrice = i.ItemPrice ?? 0m,
+                                     Quantity = i.ItemQTY ?? 1,
+                                     IsFirstItem = i.Meal == null
+                                 })
+                                 .ToList()
+                })
+                .ToList();
+
+            return groupedItems;
         }
 
         public async Task<(bool, string)> VoidOrderItem(VoidOrderItemDTO voidOrder)
@@ -351,8 +367,9 @@ namespace EBISX_POS.API.Services.Repositories
             // Fetch item and related items in a single query
             var voidItem = await _dataContext.Item
                 .Include(i => i.Order)
+                    .ThenInclude(i => i.Items)
                 .Include(i => i.Meal)
-                .Where(i => i.Id == voidOrder.itemId &&
+                .Where(i => i.EntryId == voidOrder.entryId &&
                             i.Order.Cashier.UserEmail == voidOrder.cashierEmail &&
                             i.Order.IsPending)
                 .FirstOrDefaultAsync();
@@ -362,32 +379,34 @@ namespace EBISX_POS.API.Services.Repositories
                 return (false, "Item not found.");
             }
 
-            // If it's a solo item, void it immediately
-            if (voidItem.Meal == null)
-            {
-                voidItem.IsVoid = true;
-                voidItem.VoidedAt = DateTimeOffset.Now;
-                await _dataContext.SaveChangesAsync();
-                return (true, "Solo item voided.");
-            }
+            // Mark the main item as void
+            voidItem.IsVoid = true;
+            voidItem.VoidedAt = DateTimeOffset.Now;
+            //return (true, "Solo item voided.");
 
             // Void the main item and related drinks/add-ons
             var relatedItems = await _dataContext.Item
                 .Where(i => i.Meal != null && i.Meal.Id == voidItem.Id && i.Order.Id == voidItem.Order.Id)
                 .ToListAsync();
 
-            // Mark all items (main + related) as void
-            var itemsToVoid = new List<Item> { voidItem };
-            itemsToVoid.AddRange(relatedItems);
-
-            foreach (var item in itemsToVoid)
+            // If related items exist, mark them as void as well
+            if (relatedItems.Count > 0)
             {
-                item.IsVoid = true;
-                item.VoidedAt = DateTimeOffset.Now;
+                foreach (var item in relatedItems)
+                {
+                    item.IsVoid = true;
+                    item.VoidedAt = DateTimeOffset.Now;
+                }
             }
 
+            // Recalculate and update the order's TotalAmount after voiding items.
+            var order = voidItem.Order;
+            order.TotalAmount = order.Items
+                .Where(i => !i.IsVoid)
+                .Sum(i => (i.ItemPrice ?? 0m) * (i.ItemQTY ?? 1));
+
             await _dataContext.SaveChangesAsync();
-            return (true, voidItem.Meal == null ? "Solo item voided." : "Meal and related items voided.");
+            return (true, relatedItems.Count == 0 ? "Solo item voided." : "Meal and related items voided.");
         }
     }
 }
