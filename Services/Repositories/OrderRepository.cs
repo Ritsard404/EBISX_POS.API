@@ -1,5 +1,6 @@
 ﻿using EBISX_POS.API.Data;
 using EBISX_POS.API.Models;
+using EBISX_POS.API.Models.Utils;
 using EBISX_POS.API.Services.DTO.Order;
 using EBISX_POS.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -226,6 +227,117 @@ namespace EBISX_POS.API.Services.Repositories
 
             return (true, "Order item added.");
         }
+
+        public async Task<(bool, string)> AddPwdScDiscount(AddPwdScDiscountDTO addPwdScDiscount)
+        {
+            var manager = await _dataContext.User
+                .FirstOrDefaultAsync(u => u.UserEmail == addPwdScDiscount.ManagerEmail && u.IsActive);
+             var cashier = await _dataContext.User
+                .FirstOrDefaultAsync(u => u.UserEmail == addPwdScDiscount.CashierEmail && u.IsActive);
+
+            if(cashier == null || manager == null)
+            {
+                return (false, "Invalid Credential.");
+            }
+
+            // Retrieve current orders for the given cashier.
+            var currentOrders = await GetCurrentOrderItems(cashier.UserEmail);
+
+            // Filter orders whose EntryId is in the provided list.
+            var ordersToDiscount = currentOrders
+                .Where(o => addPwdScDiscount.EntryId.Contains(o.EntryId))
+                .ToList();
+
+            if (!ordersToDiscount.Any())
+            {
+                return (false, "No matching orders found for discount.");
+            }
+
+            var discount = new Discount
+            {
+                DiscountType = addPwdScDiscount.IsSeniorDisc
+                ? DiscountTypeEnum.Senior.ToString()
+                : DiscountTypeEnum.Pwd.ToString(),
+                EligiblePwdScCount = addPwdScDiscount.PwdScCount,
+                DiscountAmount = ordersToDiscount.Sum(o => o.DiscountAmount)
+            };
+
+            // Get all matching orders in one query.
+            var entryIds = ordersToDiscount.Select(o => o.EntryId).Distinct().ToList();
+            var orderEntities = await _dataContext.Order
+                .Include(o => o.Items)
+                .Where(o => o.Items.Any(i => i.EntryId != null && entryIds.Contains(i.EntryId.Value)))
+                .ToListAsync();
+
+            foreach (var orderEntity in orderEntities)
+            {
+                // Update discount for each order.
+                orderEntity.Discount = discount;
+
+                foreach (var item in orderEntity.Items)
+                {
+                    item.IsPwdDiscounted = !addPwdScDiscount.IsSeniorDisc;
+                    item.IsSeniorDiscounted = addPwdScDiscount.IsSeniorDisc;
+                }
+            }
+
+            // Save changes to the database.
+            await _dataContext.SaveChangesAsync();
+
+            return (true, "Discount applied successfully.");
+        }
+
+        public async Task<(bool, string)> CancelCurrentOrder(string cashierEmail, string managerEmail)
+        {
+            // Fetch the cashier and manager sequentially to avoid concurrency issues
+            var cashier = await _dataContext.User
+                .FirstOrDefaultAsync(u => u.UserEmail == cashierEmail && u.IsActive);
+
+            var manager = await _dataContext.User
+                .FirstOrDefaultAsync(u => u.UserEmail == managerEmail && u.IsActive);
+
+            // Validate credentials
+            if (cashier == null || manager == null)
+            {
+                return (false, "Invalid Credential.");
+            }
+
+            // Retrieve the current pending order for the cashier
+            var currentOrder = await _dataContext.Order
+                .Include(o => o.Cashier)
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.IsPending &&
+                                          o.Cashier != null &&
+                                          o.Cashier.UserEmail == cashierEmail &&
+                                          o.Cashier.IsActive);
+
+            if (currentOrder == null)
+            {
+                return (false, "No Order Pending");
+            }
+
+            // Cancel the order
+            currentOrder.IsPending = false;
+            currentOrder.IsCancelled = true;
+
+            // Void all items in the order
+            var orderItems = await _dataContext.Item
+                .Where(i => i.Order.Id == currentOrder.Id)
+                .ToListAsync();
+
+            foreach (var item in orderItems)
+            {
+                item.IsVoid = true;
+                item.VoidedAt = DateTimeOffset.Now;
+            }
+
+            // Persist changes to the database
+            await _dataContext.SaveChangesAsync();
+
+            return (true, "Order Cancelled.");
+        }
+
+
         public async Task<(bool, string)> EditQtyOrderItem(EditOrderItemQuantityDTO editOrder)
         {
             // Check if the cashier is valid and active
@@ -288,7 +400,6 @@ namespace EBISX_POS.API.Services.Repositories
 
             return (true, $"Quantity updated to {editOrder.qty}.");
         }
-
         public async Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string cashierEmail)
         {
             // Validate the cashier.
@@ -320,30 +431,58 @@ namespace EBISX_POS.API.Services.Repositories
             var groupedItems = items
                 .GroupBy(i => i.EntryId ?? i.Meal?.EntryId)
                 .OrderBy(g => g.Min(i => i.createdAt))
-                .Select(g => new GetCurrentOrderItemsDTO
+                .Select(g =>
                 {
-                    // Use the group's key or 0 if still null.
-                    EntryId = g.Key ?? 0,
-                    // Order each group so that the parent (Meal == null) comes first.
-                    SubOrders = g.OrderBy(i => i.Meal == null ? 0 : 1)
-                                 .Select(i => new CurrentOrderItemsSubOrder
-                                 {
-                                     MenuId = i.Menu?.Id,
-                                     DrinkId = i.Drink?.Id,
-                                     AddOnId = i.AddOn?.Id,
-                                     // Fallback: use Menu name first, then Drink, then AddOn.
-                                     Name = i.Menu?.MenuName ?? i.Drink?.MenuName ?? i.AddOn?.MenuName ?? "Unknown",
-                                     Size = i.Menu?.Size ?? i.Drink?.Size ?? i.AddOn?.Size,
-                                     ItemPrice = i.ItemPrice ?? 0m,
-                                     Quantity = i.ItemQTY ?? 1,
-                                     IsFirstItem = i.Meal == null
-                                 })
-                                 .ToList()
+                    // Build the DTO from the group
+                    var dto = new GetCurrentOrderItemsDTO
+                    {
+                        // Use the group's key or 0 if still null.
+                        EntryId = g.Key ?? 0,
+                        HasDiscount = g.Any(i => i.IsPwdDiscounted || i.IsSeniorDiscounted),
+                        // Order each group so that the parent (Meal == null) comes first.
+                        SubOrders = g.OrderBy(i => i.Meal == null ? 0 : 1)
+                                     .Select(i => new CurrentOrderItemsSubOrder
+                                     {
+                                         MenuId = i.Menu?.Id,
+                                         DrinkId = i.Drink?.Id,
+                                         AddOnId = i.AddOn?.Id,
+                                         // Fallback: use Menu name first, then Drink, then AddOn.
+                                         Name = i.Menu?.MenuName ?? i.Drink?.MenuName ?? i.AddOn?.MenuName ?? "Unknown",
+                                         Size = i.Menu?.Size ?? i.Drink?.Size ?? i.AddOn?.Size,
+                                         ItemPrice = i.ItemPrice ?? 0m,
+                                         Quantity = i.ItemQTY ?? 1,
+                                         IsFirstItem = i.Meal == null
+                                     })
+                                     .ToList()
+                    };
+
+                    // If discount applies, add an extra suborder for discount details.
+                    if (dto.HasDiscount)
+                    {
+                        // Calculate discount based on the current total of suborders.
+                        // (Be aware that if you add the discount as a suborder, it might affect TotalPrice.)
+                        var discountAmount = dto.SubOrders.Sum(s => s.ItemSubTotal) * 0.20m;
+
+                        // Use the first item in the group to determine discount type.
+                        var discountName = g.Any(i => i.IsPwdDiscounted) ? "PWD" : "Senior";
+
+                        dto.SubOrders.Add(new CurrentOrderItemsSubOrder
+                        {
+                            Name = discountName,          // This can be adjusted to show a more descriptive name.
+                            ItemPrice = discountAmount, // The discount amount.
+                            Quantity = 1,
+                            // You can set Size to null or leave it empty.
+                            IsFirstItem = false         // Typically discount line is not the first item.
+                        });
+                    }
+
+                    return dto;
                 })
                 .ToList();
 
             return groupedItems;
         }
+
 
         public async Task<(bool, string)> VoidOrderItem(VoidOrderItemDTO voidOrder)
         {

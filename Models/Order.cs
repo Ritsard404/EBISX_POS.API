@@ -9,9 +9,11 @@ namespace EBISX_POS.API.Models
         public int Id { get; set; }
         public required string OrderType { get; set; }
         public required decimal TotalAmount { get; set; }
+        public decimal? CashTendered { get; set; }
         public required DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
         public bool IsCancelled { get; set; } = false;
         public bool IsPending { get; set; } = true;
+        public Discount? Discount { get; set; }
         public required User Cashier { get; set; }
         public User? Manager { get; set; }
 

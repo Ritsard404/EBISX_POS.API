@@ -10,6 +10,8 @@ namespace EBISX_POS.API.Models
         public int? ItemQTY { get; set; }
         public decimal? ItemPrice { get; set; }
         public bool IsVoid { get; set; } = false;
+        public bool IsPwdDiscounted { get; set; } = false;
+        public bool IsSeniorDiscounted { get; set; } = false;
         public Menu? Menu { get; set; }
         public Menu? Drink { get; set; }
         public Menu? AddOn { get; set; }

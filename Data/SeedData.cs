@@ -1,9 +1,6 @@
 using EBISX_POS.API.Models;
 using EBISX_POS.API.Models.Utils;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Linq;
 
 namespace EBISX_POS.API.Data
 {

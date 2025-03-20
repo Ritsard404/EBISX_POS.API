@@ -10,6 +10,8 @@
         public int TotalQuantity => SubOrders?.FirstOrDefault()?.Quantity ?? 0;
         public decimal TotalPrice => SubOrders?.Sum(s => s.ItemSubTotal) ?? 0;
         public bool HasCurrentOrder => SubOrders != null && SubOrders.Any();
+        public bool HasDiscount { get; set; } = false;
+        public decimal DiscountAmount => HasDiscount ? TotalPrice * 0.20m : 0;
     }
 
     public class CurrentOrderItemsSubOrder
@@ -40,6 +42,7 @@
             : IsUpgradeMeal
                 ? $"+ ₱{ItemSubTotal:F2}"
                 : "";
+
 
         // ✅ Opacity property for UI handling (optional)
         public double Opacity => IsFirstItem ? 1.0 : 0.0;

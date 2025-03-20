@@ -91,6 +91,44 @@ namespace EBISX_POS.API.Controllers
             return BadRequest(message);
         }
 
+        [HttpPut]
+        public async Task<IActionResult> CancelCurrentOrder(string managerEmail)
+        {
+            //string? cashierEmail = Request.Cookies["CashierEmail"];
+            //if (cashierEmail == null)
+            //{
+            //    return Unauthorized(new { message = "No active cashier session" });
+            //}
+            string cashierEmail = "user2@example.com";
+            managerEmail = "user1@example.com";
+
+            var (success, message) = await _order.CancelCurrentOrder(cashierEmail, managerEmail);
+            if (success)
+            {
+                return Ok(message);
+            }
+            return BadRequest(message);
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> AddPwdScDiscount(AddPwdScDiscountDTO addPwdScDiscount)
+        {
+            //string? cashierEmail = Request.Cookies["CashierEmail"];
+            //if (cashierEmail == null)
+            //{
+            //    return Unauthorized(new { message = "No active cashier session" });
+            //}
+            addPwdScDiscount.CashierEmail = "user2@example.com";
+            addPwdScDiscount.ManagerEmail = "user1@example.com";
+
+            var (success, message) = await _order.AddPwdScDiscount(addPwdScDiscount);
+            if (success)
+            {
+                return Ok(message);
+            }
+            return BadRequest(message);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetCurrentOrderItems()
         {
