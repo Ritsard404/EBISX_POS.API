@@ -8,10 +8,14 @@
 
         // Additional properties to display order summary (if needed)
         public int TotalQuantity => SubOrders?.FirstOrDefault()?.Quantity ?? 0;
-        public decimal TotalPrice => SubOrders?.Sum(s => s.ItemSubTotal) ?? 0;
+        public decimal TotalPrice => SubOrders?
+            .Where(i => !(i.AddOnId == null && i.MenuId == null && i.DrinkId == null))
+            .Sum(s => s.ItemSubTotal) ?? 0;
         public bool HasCurrentOrder => SubOrders != null && SubOrders.Any();
         public bool HasDiscount { get; set; } = false;
-        public decimal DiscountAmount => HasDiscount ? TotalPrice * 0.20m : 0;
+        public decimal DiscountAmount => SubOrders?
+            .Where(i => (i.AddOnId == null && i.MenuId == null && i.DrinkId == null))
+            .Sum(s => s.ItemSubTotal) ?? 0;
     }
 
     public class CurrentOrderItemsSubOrder
@@ -32,16 +36,15 @@
         public decimal ItemSubTotal => ItemPrice * Quantity;
 
         public string DisplayName => string.IsNullOrEmpty(Size)
-            ? Name + $" @{ItemPrice:F2}"
-            : $"{Name} ({Size}) @{ItemPrice:F2}";
+            ? Name + $" @{ItemPrice:G29}"
+            : $"{Name} ({Size}) @{ItemPrice:G29}";
 
         public bool IsUpgradeMeal => ItemPrice > 0;
 
-        public string ItemPriceString => IsFirstItem
-            ? $"₱{ItemSubTotal:F2}"
-            : IsUpgradeMeal
-                ? $"+ ₱{ItemSubTotal:F2}"
-                : "";
+        public string ItemPriceString => IsFirstItem ? "₱" + ItemSubTotal.ToString("G29")
+            : MenuId == null && DrinkId == null && AddOnId == null ? "- ₱" + ItemSubTotal.ToString("G29")
+            : IsUpgradeMeal ? "+ ₱" + ItemSubTotal.ToString("G29")
+            : "";
 
 
         // ✅ Opacity property for UI handling (optional)

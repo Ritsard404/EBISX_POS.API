@@ -227,15 +227,14 @@ namespace EBISX_POS.API.Services.Repositories
 
             return (true, "Order item added.");
         }
-
         public async Task<(bool, string)> AddPwdScDiscount(AddPwdScDiscountDTO addPwdScDiscount)
         {
             var manager = await _dataContext.User
                 .FirstOrDefaultAsync(u => u.UserEmail == addPwdScDiscount.ManagerEmail && u.IsActive);
-             var cashier = await _dataContext.User
-                .FirstOrDefaultAsync(u => u.UserEmail == addPwdScDiscount.CashierEmail && u.IsActive);
+            var cashier = await _dataContext.User
+               .FirstOrDefaultAsync(u => u.UserEmail == addPwdScDiscount.CashierEmail && u.IsActive);
 
-            if(cashier == null || manager == null)
+            if (cashier == null || manager == null)
             {
                 return (false, "Invalid Credential.");
             }
@@ -253,31 +252,47 @@ namespace EBISX_POS.API.Services.Repositories
                 return (false, "No matching orders found for discount.");
             }
 
+            // Sum all discount amounts from orders.
+            var totalDiscountedSubtotal = ordersToDiscount.Sum(o => o.DiscountAmount);
+
             var discount = new Discount
             {
                 DiscountType = addPwdScDiscount.IsSeniorDisc
-                ? DiscountTypeEnum.Senior.ToString()
-                : DiscountTypeEnum.Pwd.ToString(),
+                    ? DiscountTypeEnum.Senior.ToString()
+                    : DiscountTypeEnum.Pwd.ToString(),
                 EligiblePwdScCount = addPwdScDiscount.PwdScCount,
-                DiscountAmount = ordersToDiscount.Sum(o => o.DiscountAmount)
+                DiscountAmount = totalDiscountedSubtotal
             };
 
-            // Get all matching orders in one query.
-            var entryIds = ordersToDiscount.Select(o => o.EntryId).Distinct().ToList();
+            // Get all orders containing items with matching EntryId(s).
             var orderEntities = await _dataContext.Order
                 .Include(o => o.Items)
-                .Where(o => o.Items.Any(i => i.EntryId != null && entryIds.Contains(i.EntryId.Value)))
+                .Where(o => o.Items.Any(i => i.EntryId != null && addPwdScDiscount.EntryId.Contains(i.EntryId.Value)))
                 .ToListAsync();
 
             foreach (var orderEntity in orderEntities)
             {
-                // Update discount for each order.
                 orderEntity.Discount = discount;
 
+                // Update only the items that match the provided EntryId.
                 foreach (var item in orderEntity.Items)
                 {
-                    item.IsPwdDiscounted = !addPwdScDiscount.IsSeniorDisc;
-                    item.IsSeniorDiscounted = addPwdScDiscount.IsSeniorDisc;
+                    if (item.EntryId != null && addPwdScDiscount.EntryId.Contains(item.EntryId.Value))
+                    {
+                        item.IsPwdDiscounted = !addPwdScDiscount.IsSeniorDisc;
+                        item.IsSeniorDiscounted = addPwdScDiscount.IsSeniorDisc;
+                    }
+
+                    // Update related sub-meals.
+                    var subMeal = await _dataContext.Item
+                        .Where(i => i.Meal != null && i.Meal.Id == item.Id)
+                        .ToListAsync();
+
+                    foreach (var meal in subMeal)
+                    {
+                        meal.IsPwdDiscounted = !addPwdScDiscount.IsSeniorDisc;
+                        meal.IsSeniorDiscounted = addPwdScDiscount.IsSeniorDisc;
+                    }
                 }
             }
 
@@ -286,6 +301,7 @@ namespace EBISX_POS.API.Services.Repositories
 
             return (true, "Discount applied successfully.");
         }
+
 
         public async Task<(bool, string)> CancelCurrentOrder(string cashierEmail, string managerEmail)
         {
@@ -483,7 +499,6 @@ namespace EBISX_POS.API.Services.Repositories
             return groupedItems;
         }
 
-
         public async Task<(bool, string)> VoidOrderItem(VoidOrderItemDTO voidOrder)
         {
             // Fetch cashier and manager in a single query
@@ -503,10 +518,12 @@ namespace EBISX_POS.API.Services.Repositories
                 return (false, "Unauthorized Card!");
             }
 
+            decimal discountedPrice = 0m;
+
             // Fetch item and related items in a single query
             var voidItem = await _dataContext.Item
                 .Include(i => i.Order)
-                    .ThenInclude(i => i.Items)
+                    .ThenInclude(o => o.Items)
                 .Include(i => i.Meal)
                 .Where(i => i.EntryId == voidOrder.entryId &&
                             i.Order.Cashier.UserEmail == voidOrder.cashierEmail &&
@@ -521,7 +538,7 @@ namespace EBISX_POS.API.Services.Repositories
             // Mark the main item as void
             voidItem.IsVoid = true;
             voidItem.VoidedAt = DateTimeOffset.Now;
-            //return (true, "Solo item voided.");
+            discountedPrice = ((voidItem.ItemPrice ?? 0m) * (voidItem.ItemQTY ?? 0)) * 0.20m;
 
             // Void the main item and related drinks/add-ons
             var relatedItems = await _dataContext.Item
@@ -535,6 +552,7 @@ namespace EBISX_POS.API.Services.Repositories
                 {
                     item.IsVoid = true;
                     item.VoidedAt = DateTimeOffset.Now;
+                    discountedPrice += ((item.ItemPrice ?? 0m) * (item.ItemQTY ?? 0)) * 0.20m;
                 }
             }
 
@@ -544,8 +562,14 @@ namespace EBISX_POS.API.Services.Repositories
                 .Where(i => !i.IsVoid)
                 .Sum(i => (i.ItemPrice ?? 0m) * (i.ItemQTY ?? 1));
 
+            if (order.Discount != null && (voidItem.IsPwdDiscounted || voidItem.IsSeniorDiscounted))
+            {
+                order.Discount.DiscountAmount = (order.Discount.DiscountAmount ?? 0m) - discountedPrice;
+            }
+
             await _dataContext.SaveChangesAsync();
             return (true, relatedItems.Count == 0 ? "Solo item voided." : "Meal and related items voided.");
         }
+
     }
 }
