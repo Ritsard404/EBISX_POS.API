@@ -5,6 +5,7 @@ using EBISX_POS.API.Services.DTO.Order;
 using EBISX_POS.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace EBISX_POS.API.Services.Repositories
 {
@@ -227,8 +228,14 @@ namespace EBISX_POS.API.Services.Repositories
 
             return (true, "Order item added.");
         }
+
         public async Task<(bool, string)> AddPwdScDiscount(AddPwdScDiscountDTO addPwdScDiscount)
         {
+            if (addPwdScDiscount == null)
+            {
+                return (false, "Invalid discount data.");
+            }
+
             var manager = await _dataContext.User
                 .FirstOrDefaultAsync(u => u.UserEmail == addPwdScDiscount.ManagerEmail && u.IsActive);
             var cashier = await _dataContext.User
@@ -244,7 +251,7 @@ namespace EBISX_POS.API.Services.Repositories
 
             // Filter orders whose EntryId is in the provided list.
             var ordersToDiscount = currentOrders
-                .Where(o => addPwdScDiscount.EntryId.Contains(o.EntryId))
+                .Where(o => o.EntryId != null && addPwdScDiscount.EntryId.Contains(o.EntryId))
                 .ToList();
 
             if (!ordersToDiscount.Any())
@@ -255,29 +262,37 @@ namespace EBISX_POS.API.Services.Repositories
             // Sum all discount amounts from orders.
             var totalDiscountedSubtotal = ordersToDiscount.Sum(o => o.DiscountAmount);
 
-            var discount = new Discount
-            {
-                DiscountType = addPwdScDiscount.IsSeniorDisc
-                    ? DiscountTypeEnum.Senior.ToString()
-                    : DiscountTypeEnum.Pwd.ToString(),
-                EligiblePwdScCount = addPwdScDiscount.PwdScCount,
-                DiscountAmount = totalDiscountedSubtotal
-            };
-
             // Get all orders containing items with matching EntryId(s).
             var orderEntities = await _dataContext.Order
                 .Include(o => o.Items)
-                .Where(o => o.Items.Any(i => i.EntryId != null && addPwdScDiscount.EntryId.Contains(i.EntryId.Value)))
+                .Where(o => o.Items.Any(i => i.EntryId != null && addPwdScDiscount.EntryId.Contains(i.EntryId)) && o.IsPending)
                 .ToListAsync();
+
+            var currentOrder = await _dataContext.Order
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.IsPending &&
+                                          o.Cashier != null &&
+                                          o.Cashier.UserEmail == addPwdScDiscount.CashierEmail &&
+                                          o.Cashier.IsActive);
+
+            if (currentOrder == null || currentOrder.DiscountType != null)
+            {
+                return (false, "Discount already applied.");
+            }
+
+            currentOrder.DiscountType = addPwdScDiscount.IsSeniorDisc
+                    ? DiscountTypeEnum.Senior.ToString()
+                    : DiscountTypeEnum.Pwd.ToString();
+            currentOrder.DiscountAmount = totalDiscountedSubtotal;
+            currentOrder.EligiblePwdScCount = addPwdScDiscount.PwdScCount;
 
             foreach (var orderEntity in orderEntities)
             {
-                orderEntity.Discount = discount;
 
                 // Update only the items that match the provided EntryId.
                 foreach (var item in orderEntity.Items)
                 {
-                    if (item.EntryId != null && addPwdScDiscount.EntryId.Contains(item.EntryId.Value))
+                    if (item.EntryId != null && addPwdScDiscount.EntryId.Contains(item.EntryId))
                     {
                         item.IsPwdDiscounted = !addPwdScDiscount.IsSeniorDisc;
                         item.IsSeniorDiscounted = addPwdScDiscount.IsSeniorDisc;
@@ -416,6 +431,37 @@ namespace EBISX_POS.API.Services.Repositories
 
             return (true, $"Quantity updated to {editOrder.qty}.");
         }
+
+        public async Task<(bool, string)> FinalizeOrder(FinalizeOrderDTO finalizeOrder)
+        {
+            // Check if the cashier is valid and active
+            var cashier = await _dataContext.User
+                .FirstOrDefaultAsync(u => u.UserEmail == finalizeOrder.CashierEmail && u.IsActive);
+
+            if (cashier == null)
+            {
+                return (false, "Cashier not found.");
+            }
+
+            var finishOrder = await _dataContext.Order
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.IsPending);
+
+            if (finishOrder == null)
+            {
+                return (false, "No pending order found.");
+            }
+
+            finishOrder.IsPending = false;
+            finishOrder.TotalAmount = finalizeOrder.TotalAmount;
+            finishOrder.CashTendered = finalizeOrder.CashTendered;
+            finishOrder.OrderType = finalizeOrder.OrderType;
+
+            await _dataContext.SaveChangesAsync();
+
+            return (true, "Order finished!");
+        }
+
         public async Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string cashierEmail)
         {
             // Validate the cashier.
@@ -453,8 +499,10 @@ namespace EBISX_POS.API.Services.Repositories
                     var dto = new GetCurrentOrderItemsDTO
                     {
                         // Use the group's key or 0 if still null.
-                        EntryId = g.Key ?? 0,
+                        EntryId = g.Key ?? "",
                         HasDiscount = g.Any(i => i.IsPwdDiscounted || i.IsSeniorDiscounted),
+                        IsPwdDiscounted = g.Any(i => i.IsPwdDiscounted),
+                        IsSeniorDiscounted = g.Any(i => i.IsSeniorDiscounted),
                         // Order each group so that the parent (Meal == null) comes first.
                         SubOrders = g.OrderBy(i => i.Meal == null ? 0 : 1)
                                      .Select(i => new CurrentOrderItemsSubOrder
@@ -477,7 +525,9 @@ namespace EBISX_POS.API.Services.Repositories
                     {
                         // Calculate discount based on the current total of suborders.
                         // (Be aware that if you add the discount as a suborder, it might affect TotalPrice.)
-                        var discountAmount = dto.SubOrders.Sum(s => s.ItemSubTotal) * 0.20m;
+                        var discountAmount = dto.SubOrders.Sum(s => s.ItemSubTotal) >= 250 
+                        ? 250 * 0.20m
+                        : dto.SubOrders.Sum(s => s.ItemSubTotal) * 0.20m;
 
                         // Use the first item in the group to determine discount type.
                         var discountName = g.Any(i => i.IsPwdDiscounted) ? "PWD" : "Senior";
@@ -498,7 +548,6 @@ namespace EBISX_POS.API.Services.Repositories
 
             return groupedItems;
         }
-
         public async Task<(bool, string)> VoidOrderItem(VoidOrderItemDTO voidOrder)
         {
             // Fetch cashier and manager in a single query
@@ -562,9 +611,22 @@ namespace EBISX_POS.API.Services.Repositories
                 .Where(i => !i.IsVoid)
                 .Sum(i => (i.ItemPrice ?? 0m) * (i.ItemQTY ?? 1));
 
-            if (order.Discount != null && (voidItem.IsPwdDiscounted || voidItem.IsSeniorDiscounted))
+            // Recalculate discount for non-void items.
+            if (order.DiscountType != null)
             {
-                order.Discount.DiscountAmount = (order.Discount.DiscountAmount ?? 0m) - discountedPrice;
+                var discountItems = order.Items.Where(i => !i.IsVoid && (i.IsPwdDiscounted || i.IsSeniorDiscounted));
+                // Recalculate discount amount (here assuming a 20% discount).
+                order.DiscountAmount = discountItems
+                    .Sum(i => ((i.ItemPrice ?? 0m) * (i.ItemQTY ?? 1)) * 0.20m);
+                order.EligiblePwdScCount = discountItems.Count();
+
+                // Optionally, if no items remain with a discount, clear the discount type.
+                if (!discountItems.Any())
+                {
+                    order.DiscountType = null;
+                    order.DiscountAmount = 0m;
+                    order.EligiblePwdScCount = 0;
+                }
             }
 
             await _dataContext.SaveChangesAsync();

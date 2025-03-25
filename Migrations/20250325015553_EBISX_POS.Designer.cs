@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250320064937_EBISX_POS")]
+    [Migration("20250325015553_EBISX_POS")]
     partial class EBISX_POS
     {
         /// <inheritdoc />
@@ -59,44 +59,6 @@ namespace EBISX_POS.API.Migrations
                     b.ToTable("Category");
                 });
 
-            modelBuilder.Entity("EBISX_POS.API.Models.Discount", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CouponCode")
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<decimal?>("DiscountAmount")
-                        .HasColumnType("decimal(65,30)");
-
-                    b.Property<int?>("DiscountPromoPercent")
-                        .HasColumnType("int");
-
-                    b.Property<string>("DiscountType")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int?>("EligiblePwdScCount")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset?>("ExpirationTime")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("PromoCode")
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Discount");
-                });
-
             modelBuilder.Entity("EBISX_POS.API.Models.DrinkType", b =>
                 {
                     b.Property<int>("Id")
@@ -128,8 +90,8 @@ namespace EBISX_POS.API.Migrations
                     b.Property<int?>("DrinkId")
                         .HasColumnType("int");
 
-                    b.Property<long?>("EntryId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("EntryId")
+                        .HasColumnType("longtext");
 
                     b.Property<bool>("IsPwdDiscounted")
                         .HasColumnType("tinyint(1)");
@@ -244,11 +206,26 @@ namespace EBISX_POS.API.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
+                    b.Property<string>("CouponCode")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int?>("DiscountId")
+                    b.Property<decimal?>("DiscountAmount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<int?>("DiscountPromoPercent")
                         .HasColumnType("int");
+
+                    b.Property<string>("DiscountType")
+                        .HasColumnType("longtext");
+
+                    b.Property<int?>("EligiblePwdScCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("ExpirationTime")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<bool>("IsCancelled")
                         .HasColumnType("tinyint(1)");
@@ -263,14 +240,15 @@ namespace EBISX_POS.API.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("PromoCode")
+                        .HasColumnType("longtext");
+
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(65,30)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CashierUserEmail");
-
-                    b.HasIndex("DiscountId");
 
                     b.HasIndex("ManagerUserEmail");
 
@@ -420,17 +398,11 @@ namespace EBISX_POS.API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EBISX_POS.API.Models.Discount", "Discount")
-                        .WithMany()
-                        .HasForeignKey("DiscountId");
-
                     b.HasOne("EBISX_POS.API.Models.User", "Manager")
                         .WithMany()
                         .HasForeignKey("ManagerUserEmail");
 
                     b.Navigation("Cashier");
-
-                    b.Navigation("Discount");
 
                     b.Navigation("Manager");
                 });

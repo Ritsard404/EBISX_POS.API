@@ -13,7 +13,15 @@ namespace EBISX_POS.API.Models
         public required DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
         public bool IsCancelled { get; set; } = false;
         public bool IsPending { get; set; } = true;
-        public Discount? Discount { get; set; }
+
+        public string? DiscountType { get; set; }
+        public decimal? DiscountAmount { get; set; }
+        public int? DiscountPromoPercent { get; set; }
+        public int? EligiblePwdScCount { get; set; }
+        public string? PromoCode { get; set; }
+        public string? CouponCode { get; set; }
+        public DateTimeOffset? ExpirationTime { get; set; }
+
         public required User Cashier { get; set; }
         public User? Manager { get; set; }
 

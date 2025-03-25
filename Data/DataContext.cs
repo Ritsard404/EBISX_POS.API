@@ -14,7 +14,6 @@ namespace EBISX_POS.API.Data
         public DbSet<Menu> Menu { get; set; }
         public DbSet<Timestamp> Timestamp { get; set; }
         public DbSet<Order> Order { get; set; }
-        public DbSet<Discount> Discount { get; set; }
         public DbSet<Item> Item { get; set; }
         public DbSet<DrinkType> DrinkType { get; set; }
         public DbSet<AddOnType> AddOnType { get; set; }

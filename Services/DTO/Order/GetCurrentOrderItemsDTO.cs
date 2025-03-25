@@ -3,7 +3,7 @@
     public class GetCurrentOrderItemsDTO
     {
         // List of sub-orders (individual items in the order)
-        public long EntryId { get; set; }
+        public string EntryId { get; set; }
         public List<CurrentOrderItemsSubOrder>? SubOrders { get; set; }
 
         // Additional properties to display order summary (if needed)
@@ -13,6 +13,8 @@
             .Sum(s => s.ItemSubTotal) ?? 0;
         public bool HasCurrentOrder => SubOrders != null && SubOrders.Any();
         public bool HasDiscount { get; set; } = false;
+        public bool IsPwdDiscounted { get; set; } = false;
+        public bool IsSeniorDiscounted { get; set; } = false;
         public decimal DiscountAmount => SubOrders?
             .Where(i => (i.AddOnId == null && i.MenuId == null && i.DrinkId == null))
             .Sum(s => s.ItemSubTotal) ?? 0;
