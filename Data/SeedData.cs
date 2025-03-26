@@ -1,6 +1,7 @@
 using EBISX_POS.API.Models;
 using EBISX_POS.API.Models.Utils;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.ObjectModel;
 
 namespace EBISX_POS.API.Data
 {
@@ -125,6 +126,106 @@ namespace EBISX_POS.API.Data
 
                 };
                 context.Menu.AddRange(menus);
+
+                var couponPromos = new CouponPromo[]
+{
+                    // Promo type entries: No associated menus, use PromoCode.
+                    new CouponPromo
+                    {
+                        Description = "Summer Sale: 15% off on all orders",
+                        PromoCode = "SUMMER15",
+                        CouponCode = null,
+                        PromoAmount = 15.0m,
+                        CouponMenus = null, // No menus for promo type
+                        ExpirationTime = DateTimeOffset.UtcNow.AddMonths(1),
+                    },
+                    new CouponPromo
+                    {
+                        Description = "Winter Discount: 10% off storewide",
+                        PromoCode = "WINTER10",
+                        CouponCode = null,
+                        PromoAmount = 10.0m,
+                        CouponMenus = null,
+                        ExpirationTime = DateTimeOffset.UtcNow.AddMonths(2),
+                    },
+                    new CouponPromo
+                    {
+                        Description = "Spring Promo: 20% off for new customers",
+                        PromoCode = "SPRING20",
+                        CouponCode = null,
+                        PromoAmount = 20.0m,
+                        CouponMenus = null,
+                        ExpirationTime = DateTimeOffset.UtcNow.AddDays(45),
+                    },
+                    new CouponPromo
+                    {
+                        Description = "Exclusive Online Promo: 25% off on select items",
+                        PromoCode = "ONLINE25",
+                        CouponCode = null,
+                        PromoAmount = 25.0m,
+                        CouponMenus = null,
+                        ExpirationTime = DateTimeOffset.UtcNow.AddDays(30),
+                    },
+                    new CouponPromo
+                    {
+                        Description = "Limited Time Promo: 5% off your purchase",
+                        PromoCode = "LIMITED5",
+                        CouponCode = null,
+                        PromoAmount = 5.0m,
+                        CouponMenus = null,
+                        ExpirationTime = DateTimeOffset.UtcNow.AddDays(10),
+                    },
+
+                    // Coupon type entries: Have CouponCode and associated menu items.
+                    new CouponPromo
+                    {
+                        Description = "Free Cheeseburger Coupon",
+                        PromoCode = null,
+                        CouponCode = "FREE_CHEESE",
+                        PromoAmount = 4.99m,
+                        CouponMenus = new Collection<Menu> { menus[0] },
+                        ExpirationTime = DateTimeOffset.UtcNow.AddDays(20),
+                    },
+                    new CouponPromo
+                    {
+                        Description = "Discount Coupon: $1 off on Cheeseburger (second price)",
+                        PromoCode = null,
+                        CouponCode = "DISC_CHEESE",
+                        PromoAmount = 1.00m,
+                        CouponMenus = new Collection<Menu> { menus[1] },
+                        ExpirationTime = DateTimeOffset.UtcNow.AddDays(25),
+                    },
+                    new CouponPromo
+                    {
+                        Description = "Combo Coupon: Burger Ka Sakin with free add-on",
+                        PromoCode = null,
+                        CouponCode = "BKS_COUPON",
+                        PromoAmount = 2.50m,
+                        CouponMenus = new Collection<Menu> { menus[2], menus[3] },
+                        ExpirationTime = DateTimeOffset.UtcNow.AddDays(30),
+                    },
+                    new CouponPromo
+                    {
+                        Description = "Discount Coupon: $1.49 off on Bacon",
+                        PromoCode = null,
+                        CouponCode = "BACON_SAVE",
+                        PromoAmount = 1.49m,
+                        CouponMenus = new Collection<Menu> { menus[5] },
+                        ExpirationTime = DateTimeOffset.UtcNow.AddDays(35),
+                    },
+                    new CouponPromo
+                    {
+                        Description = "Special Coupon: Free Club Sandwich",
+                        PromoCode = null,
+                        CouponCode = "FREE_CLUB",
+                        PromoAmount = 5.99m, // Assuming coupon value equals item price
+                        CouponMenus = new Collection<Menu> { menus[18], menus[19] },
+                        ExpirationTime = DateTimeOffset.UtcNow.AddDays(40),
+                    }
+                };
+
+                context.CouponPromo.AddRange(couponPromos);
+                context.SaveChanges();
 
                 context.SaveChanges();
             }

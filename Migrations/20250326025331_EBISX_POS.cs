@@ -46,6 +46,30 @@ namespace EBISX_POS.API.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "CouponPromo",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    Description = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    PromoCode = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CouponCode = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    PromoAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
+                    IsAvailable = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    ExpirationTime = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CouponPromo", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "DrinkType",
                 columns: table => new
                 {
@@ -99,7 +123,8 @@ namespace EBISX_POS.API.Migrations
                     IsAddOn = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     DrinkTypeId = table.Column<int>(type: "int", nullable: true),
                     AddOnTypeId = table.Column<int>(type: "int", nullable: true),
-                    CategoryId = table.Column<int>(type: "int", nullable: false)
+                    CategoryId = table.Column<int>(type: "int", nullable: false),
+                    CouponPromoId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -115,6 +140,11 @@ namespace EBISX_POS.API.Migrations
                         principalTable: "Category",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Menu_CouponPromo_CouponPromoId",
+                        column: x => x.CouponPromoId,
+                        principalTable: "CouponPromo",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Menu_DrinkType_DrinkTypeId",
                         column: x => x.DrinkTypeId,
@@ -139,13 +169,8 @@ namespace EBISX_POS.API.Migrations
                     DiscountType = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     DiscountAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
-                    DiscountPromoPercent = table.Column<int>(type: "int", nullable: true),
                     EligiblePwdScCount = table.Column<int>(type: "int", nullable: true),
-                    PromoCode = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    CouponCode = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    ExpirationTime = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    CouponPromoId = table.Column<int>(type: "int", nullable: true),
                     CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     ManagerUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
@@ -154,6 +179,11 @@ namespace EBISX_POS.API.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Order", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Order_CouponPromo_CouponPromoId",
+                        column: x => x.CouponPromoId,
+                        principalTable: "CouponPromo",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Order_User_CashierUserEmail",
                         column: x => x.CashierUserEmail,
@@ -311,6 +341,11 @@ namespace EBISX_POS.API.Migrations
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Menu_CouponPromoId",
+                table: "Menu",
+                column: "CouponPromoId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Menu_DrinkTypeId",
                 table: "Menu",
                 column: "DrinkTypeId");
@@ -319,6 +354,11 @@ namespace EBISX_POS.API.Migrations
                 name: "IX_Order_CashierUserEmail",
                 table: "Order",
                 column: "CashierUserEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Order_CouponPromoId",
+                table: "Order",
+                column: "CouponPromoId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Order_ManagerUserEmail",
@@ -374,6 +414,9 @@ namespace EBISX_POS.API.Migrations
 
             migrationBuilder.DropTable(
                 name: "DrinkType");
+
+            migrationBuilder.DropTable(
+                name: "CouponPromo");
 
             migrationBuilder.DropTable(
                 name: "User");

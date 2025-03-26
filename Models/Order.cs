@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Drawing;
 
 namespace EBISX_POS.API.Models
 {
@@ -16,11 +15,8 @@ namespace EBISX_POS.API.Models
 
         public string? DiscountType { get; set; }
         public decimal? DiscountAmount { get; set; }
-        public int? DiscountPromoPercent { get; set; }
         public int? EligiblePwdScCount { get; set; }
-        public string? PromoCode { get; set; }
-        public string? CouponCode { get; set; }
-        public DateTimeOffset? ExpirationTime { get; set; }
+        public CouponPromo? CouponPromo { get; set; }
 
         public required User Cashier { get; set; }
         public User? Manager { get; set; }

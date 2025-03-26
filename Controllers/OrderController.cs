@@ -128,6 +128,24 @@ namespace EBISX_POS.API.Controllers
             }
             return BadRequest(message);
         }
+        [HttpPut]
+        public async Task<IActionResult> PromoDiscount(string managerEmail, string promoCode)
+        {
+            //string? cashierEmail = Request.Cookies["CashierEmail"];
+            //if (cashierEmail == null)
+            //{
+            //    return Unauthorized(new { message = "No active cashier session" });
+            //}
+            string cashierEmail = "user2@example.com";
+            managerEmail = "user1@example.com";
+
+            var (success, message) = await _order.PromoDiscount(cashierEmail: cashierEmail, managerEmail: managerEmail, promoCode: promoCode);
+            if (success)
+            {
+                return Ok(message);
+            }
+            return BadRequest(message);
+        }
 
         [HttpPut]
         public async Task<IActionResult> FinalizeOrder(FinalizeOrderDTO finalizeOrder)

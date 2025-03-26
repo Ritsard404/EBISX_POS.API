@@ -525,7 +525,7 @@ namespace EBISX_POS.API.Services.Repositories
                     {
                         // Calculate discount based on the current total of suborders.
                         // (Be aware that if you add the discount as a suborder, it might affect TotalPrice.)
-                        var discountAmount = dto.SubOrders.Sum(s => s.ItemSubTotal) >= 250 
+                        var discountAmount = dto.SubOrders.Sum(s => s.ItemSubTotal) >= 250
                         ? 250 * 0.20m
                         : dto.SubOrders.Sum(s => s.ItemSubTotal) * 0.20m;
 
@@ -548,6 +548,74 @@ namespace EBISX_POS.API.Services.Repositories
 
             return groupedItems;
         }
+
+        public async Task<(bool, string)> PromoDiscount(string cashierEmail, string managerEmail, string promoCode)
+        {
+            var now = DateTimeOffset.UtcNow;
+
+            // Fetch cashier and manager in a single query
+            var users = await _dataContext.User
+                .Where(u => (u.UserEmail == cashierEmail || u.UserEmail == managerEmail) && u.IsActive)
+                .ToListAsync();
+
+            var cashier = users.FirstOrDefault(u => u.UserEmail == cashierEmail);
+            var manager = users.FirstOrDefault(u => u.UserEmail == managerEmail);
+
+            if (cashier == null)
+                return (false, "Cashier not found.");
+            if (manager == null)
+                return (false, "Manager not found.");
+
+            // Get the valid promo (only available promos that are not expired)
+            var promo = await _dataContext.CouponPromo
+                .FirstOrDefaultAsync(p => p.PromoCode == promoCode
+                                       && p.IsAvailable
+                                       && (p.ExpirationTime == null || p.ExpirationTime > now));
+
+            if (promo == null)
+                return (false, "Invalid or expired Promo Code.");
+
+            // Fetch the current pending order along with its items
+            var currentOrder = await _dataContext.Order
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.IsPending);
+
+            if (currentOrder == null)
+                return (false, "No pending order found.");
+            if (!string.IsNullOrEmpty(currentOrder.DiscountType))
+                return (false, "Discount already applied.");
+            if (currentOrder.CouponPromo != null)
+                return (false, "Promo already applied.");
+
+            // Wrap updates in a transaction for atomicity
+            using (var transaction = await _dataContext.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    // Apply promo details to the current order
+                    currentOrder.CouponPromo = promo;
+                    currentOrder.TotalAmount -= promo.PromoAmount ?? 0m;
+                    currentOrder.DiscountType = DiscountTypeEnum.Promo.ToString();
+                    currentOrder.DiscountAmount = promo.PromoAmount;
+
+                    // Mark the promo as used
+                    promo.IsAvailable = false;
+                    promo.UpdatedAt = now;
+
+                    await _dataContext.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return (false, $"Error applying promo: {ex.Message}");
+                }
+            }
+
+            return (true, $"{promo.PromoAmount}");
+        }
+
+
         public async Task<(bool, string)> VoidOrderItem(VoidOrderItemDTO voidOrder)
         {
             // Fetch cashier and manager in a single query
