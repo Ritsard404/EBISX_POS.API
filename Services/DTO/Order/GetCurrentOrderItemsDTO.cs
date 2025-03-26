@@ -13,6 +13,7 @@
             .Sum(s => s.ItemSubTotal) ?? 0;
         public bool HasCurrentOrder => SubOrders != null && SubOrders.Any();
         public bool HasDiscount { get; set; } = false;
+        public decimal? PromoDiscountAmount { get; set; }
         public bool IsPwdDiscounted { get; set; } = false;
         public bool IsSeniorDiscounted { get; set; } = false;
         public decimal DiscountAmount => SubOrders?

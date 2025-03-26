@@ -18,6 +18,7 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<(bool, string)> CancelCurrentOrder(string cashierEmail, string managerEmail);
 
         Task<(bool, string)> PromoDiscount(string cashierEmail, string managerEmail, string promoCode);
+        Task<(bool, string)> AvailCoupon(string cashierEmail, string managerEmail, string couponCode);
 
         Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string cashierEmail);
     }

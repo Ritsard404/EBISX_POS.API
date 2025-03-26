@@ -80,6 +80,9 @@ namespace EBISX_POS.API.Migrations
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int?>("OrderId")
+                        .HasColumnType("int");
+
                     b.Property<decimal?>("PromoAmount")
                         .HasColumnType("decimal(65,30)");
 
@@ -90,6 +93,8 @@ namespace EBISX_POS.API.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
 
                     b.ToTable("CouponPromo");
                 });
@@ -246,9 +251,6 @@ namespace EBISX_POS.API.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
-                    b.Property<int?>("CouponPromoId")
-                        .HasColumnType("int");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -274,6 +276,9 @@ namespace EBISX_POS.API.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<int?>("PromoId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(65,30)");
 
@@ -281,9 +286,9 @@ namespace EBISX_POS.API.Migrations
 
                     b.HasIndex("CashierUserEmail");
 
-                    b.HasIndex("CouponPromoId");
-
                     b.HasIndex("ManagerUserEmail");
+
+                    b.HasIndex("PromoId");
 
                     b.ToTable("Order");
                 });
@@ -365,6 +370,13 @@ namespace EBISX_POS.API.Migrations
                     b.ToTable("User");
                 });
 
+            modelBuilder.Entity("EBISX_POS.API.Models.CouponPromo", b =>
+                {
+                    b.HasOne("EBISX_POS.API.Models.Order", null)
+                        .WithMany("Coupon")
+                        .HasForeignKey("OrderId");
+                });
+
             modelBuilder.Entity("EBISX_POS.API.Models.Item", b =>
                 {
                     b.HasOne("EBISX_POS.API.Models.Menu", "AddOn")
@@ -435,19 +447,19 @@ namespace EBISX_POS.API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EBISX_POS.API.Models.CouponPromo", "CouponPromo")
-                        .WithMany()
-                        .HasForeignKey("CouponPromoId");
-
                     b.HasOne("EBISX_POS.API.Models.User", "Manager")
                         .WithMany()
                         .HasForeignKey("ManagerUserEmail");
 
+                    b.HasOne("EBISX_POS.API.Models.CouponPromo", "Promo")
+                        .WithMany()
+                        .HasForeignKey("PromoId");
+
                     b.Navigation("Cashier");
 
-                    b.Navigation("CouponPromo");
-
                     b.Navigation("Manager");
+
+                    b.Navigation("Promo");
                 });
 
             modelBuilder.Entity("EBISX_POS.API.Models.Timestamp", b =>
@@ -494,6 +506,8 @@ namespace EBISX_POS.API.Migrations
 
             modelBuilder.Entity("EBISX_POS.API.Models.Order", b =>
                 {
+                    b.Navigation("Coupon");
+
                     b.Navigation("Items");
                 });
 #pragma warning restore 612, 618

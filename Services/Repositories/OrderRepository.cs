@@ -368,6 +368,65 @@ namespace EBISX_POS.API.Services.Repositories
             return (true, "Order Cancelled.");
         }
 
+        public async Task<(bool, string)> AvailCoupon(string cashierEmail, string managerEmail, string couponCode)
+        {
+            var now = DateTimeOffset.UtcNow;
+
+            // Fetch cashier and manager in a single query
+            var users = await _dataContext.User
+                .Where(u => (u.UserEmail == cashierEmail || u.UserEmail == managerEmail) && u.IsActive)
+                .ToListAsync();
+
+            var cashier = users.FirstOrDefault(u => u.UserEmail == cashierEmail);
+            var manager = users.FirstOrDefault(u => u.UserEmail == managerEmail);
+
+            if (cashier == null)
+                return (false, "Cashier not found.");
+            if (manager == null)
+                return (false, "Manager not found.");
+
+            var availedCoupon = await _dataContext.CouponPromo
+                .FirstOrDefaultAsync(c => c.CouponCode == couponCode && c.IsAvailable
+                                       && (c.ExpirationTime == null || c.ExpirationTime > now));
+            if (availedCoupon == null)
+                return (false, "Invalid/Expired Coupon Code.");
+
+            // Fetch the current pending order along with its items
+            var currentOrder = await _dataContext.Order
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.IsPending);
+
+            if (currentOrder == null)
+            {
+
+                currentOrder = new Order
+                {
+                    OrderType = "",
+                    TotalAmount = 0m,
+                    CreatedAt = DateTimeOffset.Now,
+                    Cashier = cashier,
+                    IsPending = true,
+                    IsCancelled = false,
+                    Items = new List<Item>(),
+                    Coupon = new List<CouponPromo> { availedCoupon }
+                };
+
+                await _dataContext.Order.AddAsync(currentOrder);
+            }
+
+            if (currentOrder.Promo != null || currentOrder.EligiblePwdScCount != null)
+                return (false, "A discount has already been applied to this order. You cannot apply another discount.");
+
+            if (currentOrder.Coupon != null && currentOrder.Coupon.Count() >= 3)
+                return (false, "Coupon limit reached. You can apply a maximum of 3 coupons per order.");
+
+            currentOrder.Coupon.Add(availedCoupon);
+            currentOrder.TotalAmount += availedCoupon.PromoAmount ?? 0m;
+            
+            await _dataContext.SaveChangesAsync();
+
+            return (true, "Coupon Added.");
+        }
 
         public async Task<(bool, string)> EditQtyOrderItem(EditOrderItemQuantityDTO editOrder)
         {
@@ -485,6 +544,7 @@ namespace EBISX_POS.API.Services.Repositories
                 .Include(i => i.Menu)
                 .Include(i => i.Drink)
                 .Include(i => i.AddOn)
+                .Include(i => i.Order)
                 .Include(i => i.Meal)
                 .ToListAsync();
 
@@ -495,12 +555,24 @@ namespace EBISX_POS.API.Services.Repositories
                 .OrderBy(g => g.Min(i => i.createdAt))
                 .Select(g =>
                 {
+                    // Compute the promo discount amount from the parent order.
+                    var promoDiscount = g.Select(i => (i.Order?.DiscountType == DiscountTypeEnum.Promo.ToString()
+                                                        ? i.Order?.DiscountAmount ?? 0m
+                                                        : 0m))
+                                         .FirstOrDefault();
+                    // Check for other discount types.
+                    var otherDiscount = g.Any(i => i.IsPwdDiscounted || i.IsSeniorDiscounted);
+
+                    // Set HasDiscount to true if there's any other discount or promo discount value is greater than zero.
+                    var hasDiscount = otherDiscount || (promoDiscount > 0m);
+
                     // Build the DTO from the group
                     var dto = new GetCurrentOrderItemsDTO
                     {
                         // Use the group's key or 0 if still null.
                         EntryId = g.Key ?? "",
-                        HasDiscount = g.Any(i => i.IsPwdDiscounted || i.IsSeniorDiscounted),
+                        HasDiscount = hasDiscount,
+                        PromoDiscountAmount = promoDiscount,
                         IsPwdDiscounted = g.Any(i => i.IsPwdDiscounted),
                         IsSeniorDiscounted = g.Any(i => i.IsSeniorDiscounted),
                         // Order each group so that the parent (Meal == null) comes first.
@@ -521,7 +593,7 @@ namespace EBISX_POS.API.Services.Repositories
                     };
 
                     // If discount applies, add an extra suborder for discount details.
-                    if (dto.HasDiscount)
+                    if (dto.HasDiscount && dto.PromoDiscountAmount == null)
                     {
                         // Calculate discount based on the current total of suborders.
                         // (Be aware that if you add the discount as a suborder, it might affect TotalPrice.)
@@ -584,7 +656,7 @@ namespace EBISX_POS.API.Services.Repositories
                 return (false, "No pending order found.");
             if (!string.IsNullOrEmpty(currentOrder.DiscountType))
                 return (false, "Discount already applied.");
-            if (currentOrder.CouponPromo != null)
+            if (currentOrder.Promo != null)
                 return (false, "Promo already applied.");
 
             // Wrap updates in a transaction for atomicity
@@ -593,7 +665,7 @@ namespace EBISX_POS.API.Services.Repositories
                 try
                 {
                     // Apply promo details to the current order
-                    currentOrder.CouponPromo = promo;
+                    currentOrder.Promo = promo;
                     currentOrder.TotalAmount -= promo.PromoAmount ?? 0m;
                     currentOrder.DiscountType = DiscountTypeEnum.Promo.ToString();
                     currentOrder.DiscountAmount = promo.PromoAmount;

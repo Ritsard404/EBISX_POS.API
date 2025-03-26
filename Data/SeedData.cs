@@ -183,7 +183,7 @@ namespace EBISX_POS.API.Data
                         PromoCode = null,
                         CouponCode = "FREE_CHEESE",
                         PromoAmount = 4.99m,
-                        CouponMenus = new Collection<Menu> { menus[0] },
+                        CouponMenus = new List<Menu> { menus[0] },
                         ExpirationTime = DateTimeOffset.UtcNow.AddDays(20),
                     },
                     new CouponPromo
@@ -192,7 +192,7 @@ namespace EBISX_POS.API.Data
                         PromoCode = null,
                         CouponCode = "DISC_CHEESE",
                         PromoAmount = 1.00m,
-                        CouponMenus = new Collection<Menu> { menus[1] },
+                        CouponMenus = new List<Menu> { menus[1] },
                         ExpirationTime = DateTimeOffset.UtcNow.AddDays(25),
                     },
                     new CouponPromo
@@ -201,7 +201,7 @@ namespace EBISX_POS.API.Data
                         PromoCode = null,
                         CouponCode = "BKS_COUPON",
                         PromoAmount = 2.50m,
-                        CouponMenus = new Collection<Menu> { menus[2], menus[3] },
+                        CouponMenus = new List<Menu> { menus[2], menus[3] },
                         ExpirationTime = DateTimeOffset.UtcNow.AddDays(30),
                     },
                     new CouponPromo
@@ -210,7 +210,7 @@ namespace EBISX_POS.API.Data
                         PromoCode = null,
                         CouponCode = "BACON_SAVE",
                         PromoAmount = 1.49m,
-                        CouponMenus = new Collection<Menu> { menus[5] },
+                        CouponMenus = new List<Menu> { menus[5], menus[3] },
                         ExpirationTime = DateTimeOffset.UtcNow.AddDays(35),
                     },
                     new CouponPromo
@@ -219,7 +219,7 @@ namespace EBISX_POS.API.Data
                         PromoCode = null,
                         CouponCode = "FREE_CLUB",
                         PromoAmount = 5.99m, // Assuming coupon value equals item price
-                        CouponMenus = new Collection<Menu> { menus[18], menus[19] },
+                        CouponMenus = new List<Menu> { menus[18], menus[19] },
                         ExpirationTime = DateTimeOffset.UtcNow.AddDays(40),
                     }
                 };

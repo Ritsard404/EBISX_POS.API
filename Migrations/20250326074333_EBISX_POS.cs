@@ -46,30 +46,6 @@ namespace EBISX_POS.API.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "CouponPromo",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    Description = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    PromoCode = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    CouponCode = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    PromoAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
-                    IsAvailable = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    ExpirationTime = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    UpdatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_CouponPromo", x => x.Id);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
                 name: "DrinkType",
                 columns: table => new
                 {
@@ -101,6 +77,85 @@ namespace EBISX_POS.API.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_User", x => x.UserEmail);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "Timestamp",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    TsIn = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    TsOut = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    TsBreakOut = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    TsBreakIn = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ManagerInUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ManagerOutUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ManagerBreakInUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ManagerBreakOutUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Timestamp", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Timestamp_User_CashierUserEmail",
+                        column: x => x.CashierUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Timestamp_User_ManagerBreakInUserEmail",
+                        column: x => x.ManagerBreakInUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail");
+                    table.ForeignKey(
+                        name: "FK_Timestamp_User_ManagerBreakOutUserEmail",
+                        column: x => x.ManagerBreakOutUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail");
+                    table.ForeignKey(
+                        name: "FK_Timestamp_User_ManagerInUserEmail",
+                        column: x => x.ManagerInUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Timestamp_User_ManagerOutUserEmail",
+                        column: x => x.ManagerOutUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail");
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "CouponPromo",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    Description = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    PromoCode = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CouponCode = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    PromoAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
+                    IsAvailable = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    ExpirationTime = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    OrderId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CouponPromo", x => x.Id);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -170,7 +225,7 @@ namespace EBISX_POS.API.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     DiscountAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
                     EligiblePwdScCount = table.Column<int>(type: "int", nullable: true),
-                    CouponPromoId = table.Column<int>(type: "int", nullable: true),
+                    PromoId = table.Column<int>(type: "int", nullable: true),
                     CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     ManagerUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
@@ -180,8 +235,8 @@ namespace EBISX_POS.API.Migrations
                 {
                     table.PrimaryKey("PK_Order", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Order_CouponPromo_CouponPromoId",
-                        column: x => x.CouponPromoId,
+                        name: "FK_Order_CouponPromo_PromoId",
+                        column: x => x.PromoId,
                         principalTable: "CouponPromo",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -193,60 +248,6 @@ namespace EBISX_POS.API.Migrations
                     table.ForeignKey(
                         name: "FK_Order_User_ManagerUserEmail",
                         column: x => x.ManagerUserEmail,
-                        principalTable: "User",
-                        principalColumn: "UserEmail");
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "Timestamp",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    TsIn = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    TsOut = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    TsBreakOut = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    TsBreakIn = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    ManagerInUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    ManagerOutUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    ManagerBreakInUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    ManagerBreakOutUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Timestamp", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Timestamp_User_CashierUserEmail",
-                        column: x => x.CashierUserEmail,
-                        principalTable: "User",
-                        principalColumn: "UserEmail",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Timestamp_User_ManagerBreakInUserEmail",
-                        column: x => x.ManagerBreakInUserEmail,
-                        principalTable: "User",
-                        principalColumn: "UserEmail");
-                    table.ForeignKey(
-                        name: "FK_Timestamp_User_ManagerBreakOutUserEmail",
-                        column: x => x.ManagerBreakOutUserEmail,
-                        principalTable: "User",
-                        principalColumn: "UserEmail");
-                    table.ForeignKey(
-                        name: "FK_Timestamp_User_ManagerInUserEmail",
-                        column: x => x.ManagerInUserEmail,
-                        principalTable: "User",
-                        principalColumn: "UserEmail",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Timestamp_User_ManagerOutUserEmail",
-                        column: x => x.ManagerOutUserEmail,
                         principalTable: "User",
                         principalColumn: "UserEmail");
                 })
@@ -306,6 +307,11 @@ namespace EBISX_POS.API.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CouponPromo_OrderId",
+                table: "CouponPromo",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Item_AddOnId",
                 table: "Item",
                 column: "AddOnId");
@@ -356,14 +362,14 @@ namespace EBISX_POS.API.Migrations
                 column: "CashierUserEmail");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Order_CouponPromoId",
-                table: "Order",
-                column: "CouponPromoId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Order_ManagerUserEmail",
                 table: "Order",
                 column: "ManagerUserEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Order_PromoId",
+                table: "Order",
+                column: "PromoId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Timestamp_CashierUserEmail",
@@ -389,11 +395,22 @@ namespace EBISX_POS.API.Migrations
                 name: "IX_Timestamp_ManagerOutUserEmail",
                 table: "Timestamp",
                 column: "ManagerOutUserEmail");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_CouponPromo_Order_OrderId",
+                table: "CouponPromo",
+                column: "OrderId",
+                principalTable: "Order",
+                principalColumn: "Id");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "FK_CouponPromo_Order_OrderId",
+                table: "CouponPromo");
+
             migrationBuilder.DropTable(
                 name: "Item");
 
@@ -404,9 +421,6 @@ namespace EBISX_POS.API.Migrations
                 name: "Menu");
 
             migrationBuilder.DropTable(
-                name: "Order");
-
-            migrationBuilder.DropTable(
                 name: "AddOnType");
 
             migrationBuilder.DropTable(
@@ -414,6 +428,9 @@ namespace EBISX_POS.API.Migrations
 
             migrationBuilder.DropTable(
                 name: "DrinkType");
+
+            migrationBuilder.DropTable(
+                name: "Order");
 
             migrationBuilder.DropTable(
                 name: "CouponPromo");

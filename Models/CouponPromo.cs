@@ -11,7 +11,7 @@ namespace EBISX_POS.API.Models
         public string? PromoCode { get; set; }
         public string? CouponCode { get; set; }
         public decimal? PromoAmount { get; set; }
-        public ICollection<Menu>? CouponMenus { get; set; }
+        public List<Menu>? CouponMenus { get; set; }
         public bool IsAvailable { get; set; } = true;
         public DateTimeOffset? ExpirationTime { get; set; }
 
