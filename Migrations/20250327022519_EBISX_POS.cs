@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -147,6 +148,7 @@ namespace EBISX_POS.API.Migrations
                     CouponCode = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     PromoAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
+                    CouponItemQuantity = table.Column<int>(type: "int", nullable: true),
                     IsAvailable = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     ExpirationTime = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),

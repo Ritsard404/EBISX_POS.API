@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250326074333_EBISX_POS")]
+    [Migration("20250327022519_EBISX_POS")]
     partial class EBISX_POS
     {
         /// <inheritdoc />
@@ -69,6 +69,9 @@ namespace EBISX_POS.API.Migrations
 
                     b.Property<string>("CouponCode")
                         .HasColumnType("longtext");
+
+                    b.Property<int?>("CouponItemQuantity")
+                        .HasColumnType("int");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetime(6)");

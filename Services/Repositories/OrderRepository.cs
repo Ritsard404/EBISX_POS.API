@@ -275,10 +275,15 @@ namespace EBISX_POS.API.Services.Repositories
                                           o.Cashier.UserEmail == addPwdScDiscount.CashierEmail &&
                                           o.Cashier.IsActive);
 
-            if (currentOrder == null || currentOrder.DiscountType != null)
-            {
-                return (false, "Discount already applied.");
-            }
+            if (currentOrder == null)
+                return (false, "No pending order found for the specified cashier.");
+            if (!string.IsNullOrEmpty(currentOrder.DiscountType))
+                return (false, "A discount has already been applied to this order.");
+            if (currentOrder.Promo != null)
+                return (false, "A promotional discount has already been applied to this order. Cannot combine with PWD/Senior discounts.");
+            if (currentOrder.Coupon != null && currentOrder.Coupon.Any())
+                return (false, "A coupon discount has already been applied to this order. Cannot combine with PWD/Senior discounts.");
+
 
             currentOrder.DiscountType = addPwdScDiscount.IsSeniorDisc
                     ? DiscountTypeEnum.Senior.ToString()
@@ -394,7 +399,11 @@ namespace EBISX_POS.API.Services.Repositories
             // Fetch the current pending order along with its items
             var currentOrder = await _dataContext.Order
                 .Include(o => o.Items)
+                .Include(o => o.Coupon)
                 .FirstOrDefaultAsync(o => o.IsPending);
+
+            if (currentOrder != null && currentOrder.Coupon.Any(c => c.CouponCode == couponCode))
+                return (false, "This coupon has already been applied.");
 
             if (currentOrder == null)
             {
@@ -422,7 +431,11 @@ namespace EBISX_POS.API.Services.Repositories
 
             currentOrder.Coupon.Add(availedCoupon);
             currentOrder.TotalAmount += availedCoupon.PromoAmount ?? 0m;
-            
+            currentOrder.DiscountType = DiscountTypeEnum.Coupon.ToString();
+
+            availedCoupon.IsAvailable = false;
+            availedCoupon.UpdatedAt = now;
+
             await _dataContext.SaveChangesAsync();
 
             return (true, "Coupon Added.");
@@ -535,6 +548,7 @@ namespace EBISX_POS.API.Services.Repositories
             // including related entities needed for the DTO.
             var items = await _dataContext.Order
                 .Include(o => o.Items)
+                .Include(c => c.Coupon)
                 .Where(o => o.IsPending &&
                             o.Cashier != null &&
                             o.Cashier.UserEmail == cashierEmail &&
@@ -618,6 +632,58 @@ namespace EBISX_POS.API.Services.Repositories
                 })
                 .ToList();
 
+            var ordersWithCoupons = await _dataContext.Order
+                .Include(o => o.Coupon)
+                .ThenInclude(c => c.CouponMenus)
+                .Where(o => o.IsPending &&
+                            o.Cashier != null &&
+                            o.Cashier.UserEmail == cashierEmail &&
+                            o.Cashier.IsActive &&
+                            o.Coupon.Any())
+                .ToListAsync();
+
+            var couponItems = ordersWithCoupons
+                .SelectMany(o => o.Coupon)
+                .Where(c => c != null)
+                .DistinctBy(c => c.CouponCode) // using DistinctBy from System.Linq if available
+                .Select(c => new GetCurrentOrderItemsDTO
+                {
+                    EntryId = $"Coupon-{c.CouponCode}",
+                    HasDiscount = false,
+                    PromoDiscountAmount = 0m,
+                    IsPwdDiscounted = false,
+                    IsSeniorDiscounted = false,
+                    CouponCode = c.CouponCode,
+                    SubOrders = new List<CurrentOrderItemsSubOrder>
+                    {
+                        new CurrentOrderItemsSubOrder
+                        {
+                            Name = $"Coupon: {c.CouponCode}",
+                            ItemPrice = c.PromoAmount ?? 0m,
+                            Quantity = c.CouponItemQuantity ?? 0,
+                            IsFirstItem = true
+                        }
+                    }
+                    .Concat(
+                        c.CouponMenus?.Where(m => m.MenuIsAvailable)
+                        .Select(m => new CurrentOrderItemsSubOrder
+                        {
+                            MenuId = m.Id,
+                            Name = m.MenuName,
+                            Size = m.Size,
+                            ItemPrice = 0m,
+                            Quantity = 1,
+                            IsFirstItem = false
+                        }) ?? Enumerable.Empty<CurrentOrderItemsSubOrder>()
+                    ).ToList()
+                })
+                .ToList();
+
+
+
+            // ✅ Merge regular orders with coupon orders.
+            groupedItems.AddRange(couponItems);
+
             return groupedItems;
         }
 
@@ -653,11 +719,14 @@ namespace EBISX_POS.API.Services.Repositories
                 .FirstOrDefaultAsync(o => o.IsPending);
 
             if (currentOrder == null)
-                return (false, "No pending order found.");
+                return (false, "No pending order found. Please start an order before applying a promo discount.");
             if (!string.IsNullOrEmpty(currentOrder.DiscountType))
-                return (false, "Discount already applied.");
+                return (false, "A discount has already been applied to this order. No additional discount can be applied.");
             if (currentOrder.Promo != null)
-                return (false, "Promo already applied.");
+                return (false, "A promo discount has already been applied to this order.");
+            if (currentOrder.Coupon != null && currentOrder.Coupon.Any())
+                return (false, "A coupon has already been applied to this order. You cannot combine promo discounts with coupons.");
+
 
             // Wrap updates in a transaction for atomicity
             using (var transaction = await _dataContext.Database.BeginTransactionAsync())

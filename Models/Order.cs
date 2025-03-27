@@ -16,7 +16,7 @@ namespace EBISX_POS.API.Models
         public string? DiscountType { get; set; }
         public decimal? DiscountAmount { get; set; }
         public int? EligiblePwdScCount { get; set; }
-        public List<CouponPromo>? Coupon { get; set; }
+        public ICollection<CouponPromo> Coupon { get; set; } = new List<CouponPromo>();
         public CouponPromo? Promo { get; set; }
 
         public required User Cashier { get; set; }

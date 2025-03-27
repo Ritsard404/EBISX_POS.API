@@ -67,6 +67,9 @@ namespace EBISX_POS.API.Migrations
                     b.Property<string>("CouponCode")
                         .HasColumnType("longtext");
 
+                    b.Property<int?>("CouponItemQuantity")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
