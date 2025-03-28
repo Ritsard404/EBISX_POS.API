@@ -832,6 +832,21 @@ namespace EBISX_POS.API.Services.Repositories
                     .Sum(i => ((i.ItemPrice ?? 0m) * (i.ItemQTY ?? 1)) * 0.20m);
                 order.EligiblePwdScCount = discountItems.Count();
 
+                // Limit the list entries to the eligible count (remove extra items from the beginning)
+                int eligibleCount = order.EligiblePwdScCount ?? 0;
+                var voidName = (order.EligiblePwdScNames?.Split(", ") ?? Array.Empty<string>()).ToList();
+                var voidOSca = (order.OSCAIdsNum?.Split(", ") ?? Array.Empty<string>()).ToList();
+
+                if (voidName.Count > eligibleCount)
+                    voidName.RemoveRange(0, voidName.Count - eligibleCount);
+                if (voidOSca.Count > eligibleCount)
+                    voidOSca.RemoveRange(0, voidOSca.Count - eligibleCount);
+
+                order.EligiblePwdScNames = string.Join(", ", voidName);
+                order.OSCAIdsNum = string.Join(", ", voidOSca);
+
+
+
                 // Optionally, if no items remain with a discount, clear the discount type.
                 if (!discountItems.Any())
                 {
