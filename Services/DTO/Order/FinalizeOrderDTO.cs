@@ -7,6 +7,7 @@ namespace EBISX_POS.API.Services.DTO.Order
         public required string OrderType { get; set; }
         public required decimal TotalAmount { get; set; }
         public required decimal CashTendered { get; set; }
+        public required decimal DiscountAmount { get; set; }
         [JsonIgnore]
         public string? CashierEmail { get; set; }
     }

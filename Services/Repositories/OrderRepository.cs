@@ -528,6 +528,7 @@ namespace EBISX_POS.API.Services.Repositories
             finishOrder.TotalAmount = finalizeOrder.TotalAmount;
             finishOrder.CashTendered = finalizeOrder.CashTendered;
             finishOrder.OrderType = finalizeOrder.OrderType;
+            finishOrder.DiscountAmount = finalizeOrder.DiscountAmount;
 
             await _dataContext.SaveChangesAsync();
 
@@ -607,7 +608,7 @@ namespace EBISX_POS.API.Services.Repositories
                     };
 
                     // If discount applies, add an extra suborder for discount details.
-                    if (dto.HasDiscount && dto.PromoDiscountAmount == null)
+                    if (dto.HasDiscount && dto.PromoDiscountAmount <= 0)
                     {
                         // Calculate discount based on the current total of suborders.
                         // (Be aware that if you add the discount as a suborder, it might affect TotalPrice.)
