@@ -16,6 +16,8 @@ namespace EBISX_POS.API.Models
         public string? DiscountType { get; set; }
         public decimal? DiscountAmount { get; set; }
         public int? EligiblePwdScCount { get; set; }
+        public string? EligiblePwdScNames { get; set; }
+        public string? OSCAIdsNum { get; set; }
         public ICollection<CouponPromo> Coupon { get; set; } = new List<CouponPromo>();
         public CouponPromo? Promo { get; set; }
 

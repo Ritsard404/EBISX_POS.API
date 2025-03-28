@@ -6,6 +6,8 @@ namespace EBISX_POS.API.Services.DTO.Order
     {
         public int PwdScCount { get; set; }
         public bool IsSeniorDisc { get; set; }
+        public required string EligiblePwdScNames { get; set; }
+        public required string OSCAIdsNum { get; set; }
         public required string ManagerEmail { get; set; }
         [JsonIgnore]
         public string? CashierEmail { get; set; }

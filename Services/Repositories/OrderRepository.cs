@@ -290,6 +290,8 @@ namespace EBISX_POS.API.Services.Repositories
                     : DiscountTypeEnum.Pwd.ToString();
             currentOrder.DiscountAmount = totalDiscountedSubtotal;
             currentOrder.EligiblePwdScCount = addPwdScDiscount.PwdScCount;
+            currentOrder.OSCAIdsNum=addPwdScDiscount.OSCAIdsNum;
+            currentOrder.EligiblePwdScNames = addPwdScDiscount.EligiblePwdScNames;
 
             foreach (var orderEntity in orderEntities)
             {
@@ -613,7 +615,7 @@ namespace EBISX_POS.API.Services.Repositories
                         // Calculate discount based on the current total of suborders.
                         // (Be aware that if you add the discount as a suborder, it might affect TotalPrice.)
                         var discountAmount = dto.SubOrders.Sum(s => s.ItemSubTotal) >= 250
-                        ? 250 * 0.20m
+                        ? 250 
                         : dto.SubOrders.Sum(s => s.ItemSubTotal) * 0.20m;
 
                         // Use the first item in the group to determine discount type.
