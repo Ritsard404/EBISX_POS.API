@@ -1,3 +1,4 @@
+using EBISX_POS.API.Helper;
 using EBISX_POS.API.Models;
 using EBISX_POS.API.Models.Utils;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,7 @@ namespace EBISX_POS.API.Data
 {
     public static class SeedData
     {
-        public static void Initialize(IServiceProvider serviceProvider)
+        public static async Task InitializeAsync(IServiceProvider serviceProvider)
         {
             using (var context = new DataContext(
                 serviceProvider.GetRequiredService<DbContextOptions<DataContext>>()))
@@ -125,6 +126,21 @@ namespace EBISX_POS.API.Data
 
 
                 };
+                foreach (var menu in menus)
+                {
+                        try
+                        {
+                            // Save the image to a local folder (e.g., "wwwroot/images")
+                            menu.MenuImagePath = await ImageHelper.DownloadAndSaveImageAsync("https://ebisx.com/assets/img/items/1700209804370249939_701199564837023_606470247253043161_n.png", "C:/Users/Acer/Picture/Images");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error downloading image for {menu.MenuName}: {ex.Message}");
+                            // Optionally set a default image path or leave it unchanged.
+                        }
+                    
+                }
+
                 context.Menu.AddRange(menus);
 
                 var couponPromos = new CouponPromo[]

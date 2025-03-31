@@ -266,6 +266,9 @@ namespace EBISX_POS.API.Migrations
                     b.Property<int?>("EligiblePwdScCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("EligiblePwdScNames")
+                        .HasColumnType("longtext");
+
                     b.Property<bool>("IsCancelled")
                         .HasColumnType("tinyint(1)");
 
@@ -274,6 +277,9 @@ namespace EBISX_POS.API.Migrations
 
                     b.Property<string>("ManagerUserEmail")
                         .HasColumnType("varchar(255)");
+
+                    b.Property<string>("OSCAIdsNum")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("OrderType")
                         .IsRequired()

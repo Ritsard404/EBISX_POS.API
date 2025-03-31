@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -227,6 +226,10 @@ namespace EBISX_POS.API.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     DiscountAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
                     EligiblePwdScCount = table.Column<int>(type: "int", nullable: true),
+                    EligiblePwdScNames = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    OSCAIdsNum = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     PromoId = table.Column<int>(type: "int", nullable: true),
                     CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
