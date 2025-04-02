@@ -536,11 +536,21 @@ namespace EBISX_POS.API.Services.Repositories
             return (true, "Order finished!");
         }
 
-        public async Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string cashierEmail)
+        public async Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string? cashierEmail)
         {
-            // Validate the cashier.
-            var cashier = await _dataContext.User
-                .FirstOrDefaultAsync(u => u.UserEmail == cashierEmail && u.IsActive);
+            var cashier = await _dataContext.Order
+                .Include(o => o.Cashier)
+                .Where(s => s.IsPending)
+                .Select(c => c.Cashier)
+                .FirstOrDefaultAsync();
+
+            if (cashierEmail != null)
+            {
+                cashier = await _dataContext.User
+                    .FirstOrDefaultAsync(u => u.UserEmail == cashierEmail && u.IsActive);
+            }
+
+            // If no cashier is found, return an empty list.
             if (cashier == null)
             {
                 return new List<GetCurrentOrderItemsDTO>();

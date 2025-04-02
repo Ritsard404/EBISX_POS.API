@@ -12,16 +12,16 @@ namespace EBISX_POS.API.Controllers
         [HttpPost]
         public async Task<IActionResult> AddCurrentOrderVoid(AddCurrentOrderVoidDTO voidOrder)
         {
-            //string? cashierEmail = Request.Cookies["CashierEmail"];
+            string? cashierEmail = Request.Cookies["CashierEmail"];
 
-            //if (cashierEmail == null)
-            //{
-            //    return Unauthorized(new { message = "No active cashier session" });
-            //}
+            if (cashierEmail == null)
+            {
+                return Unauthorized(new { message = "No active cashier session" });
+            }
 
 
             //addOrder.cashierEmail = cashierEmail;
-            voidOrder.cashierEmail = "user2@example.com";
+            //voidOrder.cashierEmail = "user2@example.com";
 
             var (success, message) = await _order.AddCurrentOrderVoid(voidOrder);
             if (success)
@@ -34,16 +34,16 @@ namespace EBISX_POS.API.Controllers
         [HttpPost]
         public async Task<IActionResult> AddOrderItem(AddOrderDTO addOrder)
         {
-            //string? cashierEmail = Request.Cookies["CashierEmail"];
+            string? cashierEmail = Request.Cookies["CashierEmail"];
 
-            //if (cashierEmail == null)
-            //{
-            //    return Unauthorized(new { message = "No active cashier session" });
-            //}
+            if (cashierEmail == null)
+            {
+                return Unauthorized(new { message = "No active cashier session" });
+            }
 
 
-            //addOrder.cashierEmail = cashierEmail;
-            addOrder.cashierEmail = "user2@example.com";
+            addOrder.cashierEmail = cashierEmail;
+            //addOrder.cashierEmail = "user2@example.com";
 
             var (success, message) = await _order.AddOrderItem(addOrder);
             if (success)
@@ -56,13 +56,13 @@ namespace EBISX_POS.API.Controllers
         [HttpPut]
         public async Task<IActionResult> VoidOrderItem(VoidOrderItemDTO voidOrder)
         {
-            //string? cashierEmail = Request.Cookies["CashierEmail"];
-            //if (cashierEmail == null)
-            //{
-            //    return Unauthorized(new { message = "No active cashier session" });
-            //}
-            //voidOrder.cashierEmail = cashierEmail;
-            voidOrder.cashierEmail = "user2@example.com";
+            string? cashierEmail = Request.Cookies["CashierEmail"];
+            if (cashierEmail == null)
+            {
+                return Unauthorized(new { message = "No active cashier session" });
+            }
+            voidOrder.cashierEmail = cashierEmail;
+            //voidOrder.cashierEmail = "user2@example.com";
             voidOrder.managerEmail = "user1@example.com";
 
             var (success, message) = await _order.VoidOrderItem(voidOrder);
@@ -76,12 +76,12 @@ namespace EBISX_POS.API.Controllers
         [HttpPut]
         public async Task<IActionResult> EditQtyOrderItem(EditOrderItemQuantityDTO editOrder)
         {
-            //string? cashierEmail = Request.Cookies["CashierEmail"];
-            //if (cashierEmail == null)
-            //{
-            //    return Unauthorized(new { message = "No active cashier session" });
-            //}
-            editOrder.cashierEmail = "user2@example.com";
+            string? cashierEmail = Request.Cookies["CashierEmail"];
+            if (cashierEmail == null)
+            {
+                return Unauthorized(new { message = "No active cashier session" });
+            }
+            //editOrder.cashierEmail = "user2@example.com";
 
             var (success, message) = await _order.EditQtyOrderItem(editOrder);
             if (success)
@@ -94,12 +94,12 @@ namespace EBISX_POS.API.Controllers
         [HttpPut]
         public async Task<IActionResult> CancelCurrentOrder(string managerEmail)
         {
-            //string? cashierEmail = Request.Cookies["CashierEmail"];
-            //if (cashierEmail == null)
-            //{
-            //    return Unauthorized(new { message = "No active cashier session" });
-            //}
-            string cashierEmail = "user2@example.com";
+            string? cashierEmail = Request.Cookies["CashierEmail"];
+            if (cashierEmail == null)
+            {
+                return Unauthorized(new { message = "No active cashier session" });
+            }
+            //string cashierEmail = "user2@example.com";
             managerEmail = "user1@example.com";
 
             var (success, message) = await _order.CancelCurrentOrder(cashierEmail, managerEmail);
@@ -113,12 +113,12 @@ namespace EBISX_POS.API.Controllers
         [HttpPut]
         public async Task<IActionResult> AddPwdScDiscount(AddPwdScDiscountDTO addPwdScDiscount)
         {
-            //string? cashierEmail = Request.Cookies["CashierEmail"];
-            //if (cashierEmail == null)
-            //{
-            //    return Unauthorized(new { message = "No active cashier session" });
-            //}
-            addPwdScDiscount.CashierEmail = "user2@example.com";
+            string? cashierEmail = Request.Cookies["CashierEmail"];
+            if (cashierEmail == null)
+            {
+                return Unauthorized(new { message = "No active cashier session" });
+            }
+            //addPwdScDiscount.CashierEmail = "user2@example.com";
             addPwdScDiscount.ManagerEmail = "user1@example.com";
 
             var (success, message) = await _order.AddPwdScDiscount(addPwdScDiscount);
@@ -132,12 +132,12 @@ namespace EBISX_POS.API.Controllers
         [HttpPut]
         public async Task<IActionResult> PromoDiscount(string managerEmail, string promoCode)
         {
-            //string? cashierEmail = Request.Cookies["CashierEmail"];
-            //if (cashierEmail == null)
-            //{
-            //    return Unauthorized(new { message = "No active cashier session" });
-            //}
-            string cashierEmail = "user2@example.com";
+            string? cashierEmail = Request.Cookies["CashierEmail"];
+            if (cashierEmail == null)
+            {
+                return Unauthorized(new { message = "No active cashier session" });
+            }
+            //string cashierEmail = "user2@example.com";
             managerEmail = "user1@example.com";
 
             var (success, message) = await _order.PromoDiscount(cashierEmail: cashierEmail, managerEmail: managerEmail, promoCode: promoCode);
@@ -151,12 +151,12 @@ namespace EBISX_POS.API.Controllers
         [HttpPut]
         public async Task<IActionResult> AvailCoupon(string managerEmail, string couponCode)
         {
-            //string? cashierEmail = Request.Cookies["CashierEmail"];
-            //if (cashierEmail == null)
-            //{
-            //    return Unauthorized(new { message = "No active cashier session" });
-            //}
-            string cashierEmail = "user2@example.com";
+            string? cashierEmail = Request.Cookies["CashierEmail"];
+            if (cashierEmail == null)
+            {
+                return Unauthorized(new { message = "No active cashier session" });
+            }
+            //string cashierEmail = "user2@example.com";
             managerEmail = "user1@example.com";
 
             var (success, message) = await _order.AvailCoupon(cashierEmail: cashierEmail, managerEmail: managerEmail, couponCode: couponCode);
@@ -170,12 +170,13 @@ namespace EBISX_POS.API.Controllers
         [HttpPut]
         public async Task<IActionResult> FinalizeOrder(FinalizeOrderDTO finalizeOrder)
         {
-            //string? cashierEmail = Request.Cookies["CashierEmail"];
-            //if (cashierEmail == null)
-            //{
-            //    return Unauthorized(new { message = "No active cashier session" });
-            //}
-            finalizeOrder.CashierEmail = "user2@example.com";
+            string? cashierEmail = Request.Cookies["CashierEmail"];
+            if (cashierEmail == null)
+            {
+                return Unauthorized(new { message = "No active cashier session" });
+            }
+            finalizeOrder.CashierEmail = cashierEmail;
+            //finalizeOrder.CashierEmail = "user2@example.com";
 
             var (success, message) = await _order.FinalizeOrder(finalizeOrder);
             if (success)
@@ -188,20 +189,10 @@ namespace EBISX_POS.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetCurrentOrderItems()
         {
-            //// Retrieve cashier email from cookies (if enabled)
-            //string? cashierEmail = Request.Cookies["CashierEmail"];
-
-            //// Check if the cashier session exists
-            //if (string.IsNullOrEmpty(cashierEmail))
-            //{
-            //    return Unauthorized(new { message = "No active cashier session." });
-            //}
-
-
-            string cashierEmail = "user2@example.com";
+            //string cashierEmail = "user2@example.com";
 
             // Get current order items using cashierEmail
-            var currentOrderItems = await _order.GetCurrentOrderItems(cashierEmail);
+            var currentOrderItems = await _order.GetCurrentOrderItems(null);
 
             // Return the list (empty if no items found)
             return Ok(currentOrderItems);

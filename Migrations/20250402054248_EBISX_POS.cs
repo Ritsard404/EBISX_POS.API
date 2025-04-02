@@ -88,17 +88,11 @@ namespace EBISX_POS.API.Migrations
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
                     TsIn = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     TsOut = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    TsBreakOut = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
-                    TsBreakIn = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     ManagerInUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     ManagerOutUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    ManagerBreakInUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    ManagerBreakOutUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
@@ -110,16 +104,6 @@ namespace EBISX_POS.API.Migrations
                         principalTable: "User",
                         principalColumn: "UserEmail",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Timestamp_User_ManagerBreakInUserEmail",
-                        column: x => x.ManagerBreakInUserEmail,
-                        principalTable: "User",
-                        principalColumn: "UserEmail");
-                    table.ForeignKey(
-                        name: "FK_Timestamp_User_ManagerBreakOutUserEmail",
-                        column: x => x.ManagerBreakOutUserEmail,
-                        principalTable: "User",
-                        principalColumn: "UserEmail");
                     table.ForeignKey(
                         name: "FK_Timestamp_User_ManagerInUserEmail",
                         column: x => x.ManagerInUserEmail,
@@ -380,16 +364,6 @@ namespace EBISX_POS.API.Migrations
                 name: "IX_Timestamp_CashierUserEmail",
                 table: "Timestamp",
                 column: "CashierUserEmail");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Timestamp_ManagerBreakInUserEmail",
-                table: "Timestamp",
-                column: "ManagerBreakInUserEmail");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Timestamp_ManagerBreakOutUserEmail",
-                table: "Timestamp",
-                column: "ManagerBreakOutUserEmail");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Timestamp_ManagerInUserEmail",

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250331083410_EBISX_POS")]
+    [Migration("20250402054248_EBISX_POS")]
     partial class EBISX_POS
     {
         /// <inheritdoc />
@@ -317,24 +317,12 @@ namespace EBISX_POS.API.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
-                    b.Property<string>("ManagerBreakInUserEmail")
-                        .HasColumnType("varchar(255)");
-
-                    b.Property<string>("ManagerBreakOutUserEmail")
-                        .HasColumnType("varchar(255)");
-
                     b.Property<string>("ManagerInUserEmail")
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("ManagerOutUserEmail")
                         .HasColumnType("varchar(255)");
-
-                    b.Property<DateTimeOffset?>("TsBreakIn")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTimeOffset?>("TsBreakOut")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<DateTimeOffset?>("TsIn")
                         .HasColumnType("datetime(6)");
@@ -345,10 +333,6 @@ namespace EBISX_POS.API.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CashierUserEmail");
-
-                    b.HasIndex("ManagerBreakInUserEmail");
-
-                    b.HasIndex("ManagerBreakOutUserEmail");
 
                     b.HasIndex("ManagerInUserEmail");
 
@@ -482,14 +466,6 @@ namespace EBISX_POS.API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EBISX_POS.API.Models.User", "ManagerBreakIn")
-                        .WithMany()
-                        .HasForeignKey("ManagerBreakInUserEmail");
-
-                    b.HasOne("EBISX_POS.API.Models.User", "ManagerBreakOut")
-                        .WithMany()
-                        .HasForeignKey("ManagerBreakOutUserEmail");
-
                     b.HasOne("EBISX_POS.API.Models.User", "ManagerIn")
                         .WithMany()
                         .HasForeignKey("ManagerInUserEmail")
@@ -501,10 +477,6 @@ namespace EBISX_POS.API.Migrations
                         .HasForeignKey("ManagerOutUserEmail");
 
                     b.Navigation("Cashier");
-
-                    b.Navigation("ManagerBreakIn");
-
-                    b.Navigation("ManagerBreakOut");
 
                     b.Navigation("ManagerIn");
 

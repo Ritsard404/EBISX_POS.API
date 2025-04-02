@@ -15,6 +15,13 @@ namespace EBISX_POS.API.Controllers
             return Ok(cashiers);
         }
 
+        [HttpGet()]
+        public async Task<IActionResult> GetCashier()
+        {
+            string? cashierEmail = Request.Cookies["CashierEmail"];
+            return Ok(cashierEmail);
+        }
+
         [HttpGet]
         public async Task<IActionResult> HasPendingOrder()
         {
@@ -40,8 +47,6 @@ namespace EBISX_POS.API.Controllers
             return Ok(new { cashierEmail });
         }
 
-
-
         [HttpPost]
         public async Task<IActionResult> LogIn(LogInDTO logInDTO)
         {
@@ -53,13 +58,30 @@ namespace EBISX_POS.API.Controllers
             Response.Cookies.Append("CashierEmail", cashierEmail, new CookieOptions
             {
                 HttpOnly = true,  // Prevents JavaScript access (Prevents XSS)
-                Secure = true,    // Only send cookie over HTTPS
-                SameSite = SameSiteMode.Strict, // Restricts cross-site requests
+                Secure = false,    // Only send cookie over HTTPS
+                SameSite = SameSiteMode.Lax, // Restricts cross-site requests
                 //Expires = DateTimeOffset.Now.AddMinutes(1) 
                 Expires = DateTimeOffset.Now.AddDays(1)
             });
 
             return Ok(new { cashierName });
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> LogOut(string managerEmail)
+        {
+            string? cashierEmail = Request.Cookies["CashierEmail"];
+            if (cashierEmail == null)
+                return Unauthorized(new { message = "No active cashier session" });
+
+            var (success, message) = await _auth.LogOut(new LogInDTO() { CashierEmail = cashierEmail, ManagerEmail = managerEmail });
+            if (!success)
+                return BadRequest(message);
+
+            // Clear the HTTP-only cookie by removing it.
+            Response.Cookies.Delete("CashierEmail");
+
+            return Ok(new { message });
         }
     }
 }
