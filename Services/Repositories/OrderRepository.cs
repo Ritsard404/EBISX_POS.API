@@ -538,33 +538,30 @@ namespace EBISX_POS.API.Services.Repositories
 
         public async Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string? cashierEmail)
         {
-            var cashier = await _dataContext.Order
-                .Include(o => o.Cashier)
-                .Where(s => s.IsPending)
-                .Select(c => c.Cashier)
-                .FirstOrDefaultAsync();
+            //var cashier = await _dataContext.Order
+            //    .Include(o => o.Cashier)
+            //    .Where(s => s.IsPending)
+            //    .Select(c => c.Cashier)
+            //    .FirstOrDefaultAsync();
 
-            if (cashierEmail != null)
-            {
-                cashier = await _dataContext.User
-                    .FirstOrDefaultAsync(u => u.UserEmail == cashierEmail && u.IsActive);
-            }
+            //if (cashierEmail != null)
+            //{
+            //    cashier = await _dataContext.User
+            //        .FirstOrDefaultAsync(u => u.UserEmail == cashierEmail && u.IsActive);
+            //}
 
-            // If no cashier is found, return an empty list.
-            if (cashier == null)
-            {
-                return new List<GetCurrentOrderItemsDTO>();
-            }
+            //// If no cashier is found, return an empty list.
+            //if (cashier == null)
+            //{
+            //    return new List<GetCurrentOrderItemsDTO>();
+            //}
 
             // Fetch all non-voided items from pending orders for the cashier,
             // including related entities needed for the DTO.
             var items = await _dataContext.Order
                 .Include(o => o.Items)
                 .Include(c => c.Coupon)
-                .Where(o => o.IsPending &&
-                            o.Cashier != null &&
-                            o.Cashier.UserEmail == cashierEmail &&
-                            o.Cashier.IsActive)
+                .Where(o => o.IsPending)
                 .SelectMany(o => o.Items)
                 .Where(i => !i.IsVoid)
                 .Include(i => i.Menu)
@@ -573,6 +570,22 @@ namespace EBISX_POS.API.Services.Repositories
                 .Include(i => i.Order)
                 .Include(i => i.Meal)
                 .ToListAsync();
+
+            //var items = await _dataContext.Order
+            //    .Include(o => o.Items)
+            //    .Include(c => c.Coupon)
+            //    .Where(o => o.IsPending &&
+            //                o.Cashier != null &&
+            //                o.Cashier.UserEmail == cashierEmail &&
+            //                o.Cashier.IsActive)
+            //    .SelectMany(o => o.Items)
+            //    .Where(i => !i.IsVoid)
+            //    .Include(i => i.Menu)
+            //    .Include(i => i.Drink)
+            //    .Include(i => i.AddOn)
+            //    .Include(i => i.Order)
+            //    .Include(i => i.Meal)
+            //    .ToListAsync();
 
             // Group items by EntryId.
             // For items with no EntryId (child meals), use the parent's EntryId from the Meal property.
