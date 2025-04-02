@@ -28,6 +28,18 @@ namespace EBISX_POS.API.Services.Repositories
             return cashiers;
         }
 
+        public async Task<(bool, string, string)> HasPendingOrder()
+        {
+            var pendingOrder = await _dataContext.Order
+                .Include(c => c.Cashier)
+                .Where(o => o.IsPending)
+                .FirstOrDefaultAsync();
+
+            if (pendingOrder == null)
+                return (false, "", "");
+
+            return (true, pendingOrder.Cashier.UserEmail, pendingOrder.Cashier.UserFName + " " + pendingOrder.Cashier.UserLName);
+        }
 
         public async Task<(bool, string, string)> LogIn(LogInDTO logInDTO)
         {

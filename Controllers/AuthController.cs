@@ -6,7 +6,7 @@ namespace EBISX_POS.API.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
-    public class AuthController(IAuth _auth): ControllerBase
+    public class AuthController(IAuth _auth) : ControllerBase
     {
         [HttpGet()]
         public async Task<IActionResult> Cashiers()
@@ -16,15 +16,31 @@ namespace EBISX_POS.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetCurrentCashier()
+        public async Task<IActionResult> HasPendingOrder()
         {
-            if (Request.Cookies.TryGetValue("CashierEmail", out var cashierEmail))
+            if (!Request.Cookies.TryGetValue("CashierEmail", out var cashierEmail) || string.IsNullOrWhiteSpace(cashierEmail))
             {
-                return Ok(new { cashierEmail });
+                var (success, pendingCashierEmail, cashierName) = await _auth.HasPendingOrder();
+                if (success)
+                {
+                    Response.Cookies.Append("CashierEmail", pendingCashierEmail, new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = true,
+                        SameSite = SameSiteMode.Strict,
+                        Expires = DateTimeOffset.Now.AddDays(1)
+                    });
+
+                    return Ok(new { cashierName });
+                }
+
+                return Unauthorized(new { message = "No active cashier session and no pending orders" });
             }
 
-            return Unauthorized(new { message = "No active cashier session" });
+            return Ok(new { cashierEmail });
         }
+
+
 
         [HttpPost]
         public async Task<IActionResult> LogIn(LogInDTO logInDTO)
@@ -39,7 +55,8 @@ namespace EBISX_POS.API.Controllers
                 HttpOnly = true,  // Prevents JavaScript access (Prevents XSS)
                 Secure = true,    // Only send cookie over HTTPS
                 SameSite = SameSiteMode.Strict, // Restricts cross-site requests
-                Expires = DateTimeOffset.Now.AddDays(1) 
+                //Expires = DateTimeOffset.Now.AddMinutes(1) 
+                Expires = DateTimeOffset.Now.AddDays(1)
             });
 
             return Ok(new { cashierName });

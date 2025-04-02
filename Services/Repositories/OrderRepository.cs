@@ -324,7 +324,6 @@ namespace EBISX_POS.API.Services.Repositories
             return (true, "Discount applied successfully.");
         }
 
-
         public async Task<(bool, string)> CancelCurrentOrder(string cashierEmail, string managerEmail)
         {
             // Fetch the cashier and manager sequentially to avoid concurrency issues
