@@ -241,9 +241,13 @@ namespace EBISX_POS.API.Services.Repositories
             var cashier = await _dataContext.User
                .FirstOrDefaultAsync(u => u.UserEmail == addPwdScDiscount.CashierEmail && u.IsActive);
 
-            if (cashier == null || manager == null)
+            if (cashier == null)
             {
-                return (false, "Invalid Credential.");
+                return (false, "Invalid Cashier Credential. Cashier:" + addPwdScDiscount.CashierEmail);
+            }
+            if ( manager == null)
+            {
+                return (false, "Invalid Manager Credential.");
             }
 
             // Retrieve current orders for the given cashier.
@@ -446,7 +450,7 @@ namespace EBISX_POS.API.Services.Repositories
         {
             // Check if the cashier is valid and active
             var cashier = await _dataContext.User
-                .FirstOrDefaultAsync(u => u.UserEmail == editOrder.cashierEmail && u.IsActive);
+                .FirstOrDefaultAsync(u => u.UserEmail == editOrder.CashierEmail && u.IsActive);
 
             if (cashier == null)
             {
@@ -460,7 +464,7 @@ namespace EBISX_POS.API.Services.Repositories
                 .Include(i => i.Meal)
                 .FirstOrDefaultAsync(i =>
                     i.EntryId == editOrder.entryId &&
-                    i.Order.Cashier.UserEmail == editOrder.cashierEmail &&
+                    i.Order.Cashier.UserEmail == editOrder.CashierEmail &&
                     i.Order.IsPending &&
                     !i.IsVoid
                 );
@@ -536,56 +540,68 @@ namespace EBISX_POS.API.Services.Repositories
             return (true, "Order finished!");
         }
 
-        public async Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string? cashierEmail)
+        public async Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string cashierEmail)
         {
-            //var cashier = await _dataContext.Order
-            //    .Include(o => o.Cashier)
-            //    .Where(s => s.IsPending)
-            //    .Select(c => c.Cashier)
-            //    .FirstOrDefaultAsync();
-
-            //if (cashierEmail != null)
-            //{
-            //    cashier = await _dataContext.User
-            //        .FirstOrDefaultAsync(u => u.UserEmail == cashierEmail && u.IsActive);
-            //}
-
-            //// If no cashier is found, return an empty list.
-            //if (cashier == null)
-            //{
-            //    return new List<GetCurrentOrderItemsDTO>();
-            //}
-
-            // Fetch all non-voided items from pending orders for the cashier,
-            // including related entities needed for the DTO.
-            var items = await _dataContext.Order
-                .Include(o => o.Items)
-                .Include(c => c.Coupon)
-                .Where(o => o.IsPending)
-                .SelectMany(o => o.Items)
-                .Where(i => !i.IsVoid)
-                .Include(i => i.Menu)
-                .Include(i => i.Drink)
-                .Include(i => i.AddOn)
-                .Include(i => i.Order)
-                .Include(i => i.Meal)
-                .ToListAsync();
-
-            //var items = await _dataContext.Order
+            //// Build base query
+            //var query = _dataContext.Order
             //    .Include(o => o.Items)
-            //    .Include(c => c.Coupon)
-            //    .Where(o => o.IsPending &&
-            //                o.Cashier != null &&
-            //                o.Cashier.UserEmail == cashierEmail &&
-            //                o.Cashier.IsActive)
-            //    .SelectMany(o => o.Items)
-            //    .Where(i => !i.IsVoid)
-            //    .Include(i => i.Menu)
-            //    .Include(i => i.Drink)
-            //    .Include(i => i.AddOn)
-            //    .Include(i => i.Order)
-            //    .Include(i => i.Meal)
+            //        .ThenInclude(i => i.Menu)
+            //    .Include(o => o.Items)
+            //        .ThenInclude(i => i.Drink)
+            //    .Include(o => o.Items)
+            //        .ThenInclude(i => i.AddOn)
+            //    .Include(o => o.Items)
+            //        .ThenInclude(i => i.Meal)
+            //    .Include(o => o.Coupon)
+            //    .Where(o => o.IsPending);
+
+            //if (!string.IsNullOrEmpty(cashierEmail))
+            //{
+            //    query = query.Where(o => o.Cashier != null
+            //                            && o.Cashier.UserEmail == cashierEmail
+            //                            && o.Cashier.IsActive);
+            //}
+
+            //var items = await query
+            //    .SelectMany(o => o.Items.Where(i => !i.IsVoid))
             //    .ToListAsync();
+
+            var cashier = await _dataContext.Order
+                .Include(o => o.Cashier)
+                .Where(s => s.IsPending)
+                .Select(c => c.Cashier)
+                .FirstOrDefaultAsync();
+
+            if (cashierEmail != null)
+            {
+                cashier = await _dataContext.User
+                    .FirstOrDefaultAsync(u => u.UserEmail == cashierEmail && u.IsActive);
+            }
+
+            // If no cashier is found, return an empty list.
+            if (cashier == null)
+            {
+                return new List<GetCurrentOrderItemsDTO>();
+            }
+
+            //Fetch all non - voided items from pending orders for the cashier,
+            //including related entities needed for the DTO.
+
+           var items = await _dataContext.Order
+               .Include(o => o.Items)
+               .Include(c => c.Coupon)
+               .Where(o => o.IsPending &&
+                           o.Cashier != null &&
+                           o.Cashier.UserEmail == cashierEmail &&
+                           o.Cashier.IsActive)
+               .SelectMany(o => o.Items)
+               .Where(i => !i.IsVoid)
+               .Include(i => i.Menu)
+               .Include(i => i.Drink)
+               .Include(i => i.AddOn)
+               .Include(i => i.Order)
+               .Include(i => i.Meal)
+               .ToListAsync();
 
             // Group items by EntryId.
             // For items with no EntryId (child meals), use the parent's EntryId from the Meal property.

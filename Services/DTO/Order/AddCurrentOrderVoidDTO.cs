@@ -11,8 +11,6 @@ namespace EBISX_POS.API.Services.DTO.Order
         public decimal? drinkPrice { get; set; }
         public decimal? addOnPrice { get; set; }
         public required string managerEmail { get; set; }
-
-        [JsonIgnore]
-        public string? cashierEmail { get; set; }
+        public required string cashierEmail { get; set; }
     }
 }

@@ -7,7 +7,6 @@ namespace EBISX_POS.API.Services.DTO.Order
         public string entryId { get; set; }
         public required string managerEmail { get; set; }
 
-        [JsonIgnore]
-        public string? cashierEmail { get; set; }
+        public required string cashierEmail { get; set; }
     }
 }

@@ -26,26 +26,39 @@ namespace EBISX_POS.API.Services.Repositories
 
             return cashiers;
         }
-
         public async Task<(bool, string, string)> HasPendingOrder()
         {
+            // Check if there's a pending order with a related cashier.
             var pendingOrder = await _dataContext.Order
-                .Include(c => c.Cashier)
+                .Include(o => o.Cashier)
                 .Where(o => o.IsPending)
                 .FirstOrDefaultAsync();
 
-            if (pendingOrder == null)
-                return (false, "", "");
-
-            var notTimeOut = await _dataContext.Timestamp
-                .Where(t => t.TsOut == null && t.Cashier == pendingOrder.Cashier)
+            // Check if there's an active timestamp (meaning the cashier hasn't timed out yet).
+            var activeTimestamp = await _dataContext.Timestamp
+                .Include(t => t.Cashier)
+                .Where(t => t.TsOut == null)
                 .FirstOrDefaultAsync();
 
-            if (notTimeOut != null)
-                return (false, "", "");
+            // If a pending order exists, use its cashier information.
+            if (pendingOrder != null)
+            {
+                return (true,
+                        pendingOrder.Cashier.UserEmail,
+                        $"{pendingOrder.Cashier.UserFName} {pendingOrder.Cashier.UserLName}");
+            }
+            // If no pending order but the cashier is still clocked in, return its information.
+            else if (activeTimestamp != null)
+            {
+                return (true,
+                        activeTimestamp.Cashier.UserEmail,
+                        $"{activeTimestamp.Cashier.UserFName} {activeTimestamp.Cashier.UserLName}");
+            }
 
-            return (true, pendingOrder.Cashier.UserEmail, pendingOrder.Cashier.UserFName + " " + pendingOrder.Cashier.UserLName);
+            // If neither condition is met, return false with empty values.
+            return (false, "", "");
         }
+
 
         public async Task<(bool, string, string)> LogIn(LogInDTO logInDTO)
         {
@@ -89,9 +102,12 @@ namespace EBISX_POS.API.Services.Repositories
             if (cashier == null)
                 return (false, "Invalid Credential of Cashier!");
 
-            var (success, pendingCashierEmail, cashierName) = await HasPendingOrder();
 
-            if (success)
+            var pendingOrder = await _dataContext.Order
+                .Where(o => o.IsPending && o.Cashier == cashier)
+                .AnyAsync();
+
+            if (pendingOrder)
                 return (false, "Cashier has pending order!");
 
             var timestamp = await _dataContext.Timestamp
