@@ -1,12 +1,8 @@
 ﻿using EBISX_POS.API.Data;
 using EBISX_POS.API.Services.Interfaces;
 using EBISX_POS.API.Services.Repositories;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using EBISX_POS.API.Settings;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.Filters;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,18 +13,28 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// ✅ Get Connection String
-var connectionString = builder.Configuration.GetConnectionString("POSConnection");
+// Add configuration services to the container.
+builder.Services.Configure<FilePaths>(
+    builder.Configuration.GetSection("FilePaths"));
 
-// ✅ Use Pomelo MySQL Provider
+// Get connection strings from configuration
+var posConnectionString = builder.Configuration.GetConnectionString("POSConnection");
+var journalConnectionString = builder.Configuration.GetConnectionString("JournalConnection");
+
+// Register the primary context for the POS database using Pomelo MySQL Provider
 builder.Services.AddDbContext<DataContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseMySql(posConnectionString, ServerVersion.AutoDetect(posConnectionString)));
+
+// Register a separate context for the Journal database
+builder.Services.AddDbContext<JournalContext>(options =>
+    options.UseMySql(journalConnectionString, ServerVersion.AutoDetect(journalConnectionString)));
 
 
 // Add Scope of Interface and Repository
 builder.Services.AddScoped<IAuth, AuthRepository>();
 builder.Services.AddScoped<IMenu, MenuRepository>();
 builder.Services.AddScoped<IOrder, OrderRepository>();
+builder.Services.AddScoped<IPayment, PaymentRepository>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -42,6 +48,8 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
+
+builder.Services.AddOptions();
 
 var app = builder.Build();
 

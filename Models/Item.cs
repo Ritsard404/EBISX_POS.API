@@ -5,7 +5,7 @@ namespace EBISX_POS.API.Models
     public class Item
     {
         [Key]
-        public int Id { get; set; }
+        public long Id { get; set; }
         public string? EntryId { get; set; }
         public int? ItemQTY { get; set; }
         public decimal? ItemPrice { get; set; }

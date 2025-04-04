@@ -1,7 +1,9 @@
 using EBISX_POS.API.Helper;
 using EBISX_POS.API.Models;
 using EBISX_POS.API.Models.Utils;
+using EBISX_POS.API.Settings;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Collections.ObjectModel;
 
 namespace EBISX_POS.API.Data
@@ -13,6 +15,9 @@ namespace EBISX_POS.API.Data
             using (var context = new DataContext(
                 serviceProvider.GetRequiredService<DbContextOptions<DataContext>>()))
             {
+                // Retrieve FilePaths configuration from DI container.
+                var filePaths = serviceProvider.GetRequiredService<IOptions<FilePaths>>().Value;
+
                 // Look for any data already in the database.
                 if (context.User.Any() || context.Category.Any() || context.Menu.Any() || context.Timestamp.Any() || context.Order.Any() || context.Item.Any())
                 {
@@ -39,6 +44,19 @@ namespace EBISX_POS.API.Data
                     new DrinkType { DrinkTypeName = "Cold" },
                 };
                 context.DrinkType.AddRange(drinkTypes);
+
+
+                var saleTypes = new SaleType[]
+                {
+                    new SaleType { Name = "GCASH", Account = "A/R - GCASH", Type = "CHARGE" },
+                    new SaleType { Name = "PAYMAYA", Account = "A/R - PAYMAYA", Type = "CHARGE" },
+                    new SaleType { Name = "FOOD PANDA", Account = "A/R - FOOD PANDA", Type = "CHARGE" },
+                    new SaleType { Name = "GRAB", Account = "A/R - FOOD PANDA", Type = "CHARGE" },
+                    new SaleType { Name = "GIFT CHEQUE", Account = "A/R - PRODUCT GC", Type = "CHARGE" },
+                    new SaleType { Name = "DEBIT", Account = "A/R - DEBIT", Type = "CHARGE" },
+                    new SaleType { Name = "CREDIT", Account = "A/R - CREDIT", Type = "CHARGE" },
+                };
+                context.SaleType.AddRange(saleTypes);
 
                 var addOnTypes = new AddOnType[]
                 {
@@ -130,7 +148,7 @@ namespace EBISX_POS.API.Data
                     try
                     {
                         // Save the image to a local folder (e.g., "wwwroot/images")
-                        menu.MenuImagePath = await ImageHelper.DownloadAndSaveImageAsync("https://ebisx.com/assets/img/items/1700209804370249939_701199564837023_606470247253043161_n.png", "C:/Users/Acer/Picture/Images");
+                        menu.MenuImagePath = await ImageHelper.DownloadAndSaveImageAsync("https://ebisx.com/assets/img/items/1700209804370249939_701199564837023_606470247253043161_n.png", filePaths.ImagePath);
                     }
                     catch (Exception ex)
                     {

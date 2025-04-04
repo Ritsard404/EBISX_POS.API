@@ -61,6 +61,25 @@ namespace EBISX_POS.API.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "SaleType",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    Name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Account = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Type = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SaleType", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "User",
                 columns: table => new
                 {
@@ -119,6 +138,30 @@ namespace EBISX_POS.API.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "AlternativePayments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    Reference = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Amount = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
+                    OrderId = table.Column<long>(type: "bigint", nullable: false),
+                    SaleTypeId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AlternativePayments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AlternativePayments_SaleType_SaleTypeId",
+                        column: x => x.SaleTypeId,
+                        principalTable: "SaleType",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "CouponPromo",
                 columns: table => new
                 {
@@ -136,7 +179,7 @@ namespace EBISX_POS.API.Migrations
                     ExpirationTime = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    OrderId = table.Column<int>(type: "int", nullable: true)
+                    OrderId = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -197,7 +240,7 @@ namespace EBISX_POS.API.Migrations
                 name: "Order",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
                     OrderType = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -246,7 +289,7 @@ namespace EBISX_POS.API.Migrations
                 name: "Item",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
                     EntryId = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -258,8 +301,8 @@ namespace EBISX_POS.API.Migrations
                     MenuId = table.Column<int>(type: "int", nullable: true),
                     DrinkId = table.Column<int>(type: "int", nullable: true),
                     AddOnId = table.Column<int>(type: "int", nullable: true),
-                    MealId = table.Column<int>(type: "int", nullable: true),
-                    OrderId = table.Column<int>(type: "int", nullable: false),
+                    MealId = table.Column<long>(type: "bigint", nullable: true),
+                    OrderId = table.Column<long>(type: "bigint", nullable: false),
                     createdAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     VoidedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true)
                 },
@@ -294,6 +337,16 @@ namespace EBISX_POS.API.Migrations
                         onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AlternativePayments_OrderId",
+                table: "AlternativePayments",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AlternativePayments_SaleTypeId",
+                table: "AlternativePayments",
+                column: "SaleTypeId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CouponPromo_OrderId",
@@ -376,6 +429,14 @@ namespace EBISX_POS.API.Migrations
                 column: "ManagerOutUserEmail");
 
             migrationBuilder.AddForeignKey(
+                name: "FK_AlternativePayments_Order_OrderId",
+                table: "AlternativePayments",
+                column: "OrderId",
+                principalTable: "Order",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
                 name: "FK_CouponPromo_Order_OrderId",
                 table: "CouponPromo",
                 column: "OrderId",
@@ -391,10 +452,16 @@ namespace EBISX_POS.API.Migrations
                 table: "CouponPromo");
 
             migrationBuilder.DropTable(
+                name: "AlternativePayments");
+
+            migrationBuilder.DropTable(
                 name: "Item");
 
             migrationBuilder.DropTable(
                 name: "Timestamp");
+
+            migrationBuilder.DropTable(
+                name: "SaleType");
 
             migrationBuilder.DropTable(
                 name: "Menu");

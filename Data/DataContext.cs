@@ -18,6 +18,8 @@ namespace EBISX_POS.API.Data
         public DbSet<DrinkType> DrinkType { get; set; }
         public DbSet<AddOnType> AddOnType { get; set; }
         public DbSet<CouponPromo> CouponPromo { get; set; }
+        public DbSet<SaleType> SaleType { get; set; }
+        public DbSet<AlternativePayments> AlternativePayments { get; set; }
 
         // ✅ Auto-calculate subtotal before saving
         //public override int SaveChanges()

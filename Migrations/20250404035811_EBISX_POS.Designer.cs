@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250402054248_EBISX_POS")]
+    [Migration("20250404035811_EBISX_POS")]
     partial class EBISX_POS
     {
         /// <inheritdoc />
@@ -40,6 +40,36 @@ namespace EBISX_POS.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AddOnType");
+                });
+
+            modelBuilder.Entity("EBISX_POS.API.Models.AlternativePayments", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("SaleTypeId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("SaleTypeId");
+
+                    b.ToTable("AlternativePayments");
                 });
 
             modelBuilder.Entity("EBISX_POS.API.Models.Category", b =>
@@ -86,8 +116,8 @@ namespace EBISX_POS.API.Migrations
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<int?>("OrderId")
-                        .HasColumnType("int");
+                    b.Property<long?>("OrderId")
+                        .HasColumnType("bigint");
 
                     b.Property<decimal?>("PromoAmount")
                         .HasColumnType("decimal(65,30)");
@@ -124,11 +154,11 @@ namespace EBISX_POS.API.Migrations
 
             modelBuilder.Entity("EBISX_POS.API.Models.Item", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("bigint");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<int?>("AddOnId")
                         .HasColumnType("int");
@@ -154,14 +184,14 @@ namespace EBISX_POS.API.Migrations
                     b.Property<int?>("ItemQTY")
                         .HasColumnType("int");
 
-                    b.Property<int?>("MealId")
-                        .HasColumnType("int");
+                    b.Property<long?>("MealId")
+                        .HasColumnType("bigint");
 
                     b.Property<int?>("MenuId")
                         .HasColumnType("int");
 
-                    b.Property<int>("OrderId")
-                        .HasColumnType("int");
+                    b.Property<long>("OrderId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset?>("VoidedAt")
                         .HasColumnType("datetime(6)");
@@ -244,11 +274,11 @@ namespace EBISX_POS.API.Migrations
 
             modelBuilder.Entity("EBISX_POS.API.Models.Order", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("bigint");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<decimal?>("CashTendered")
                         .HasColumnType("decimal(65,30)");
@@ -303,6 +333,31 @@ namespace EBISX_POS.API.Migrations
                     b.HasIndex("PromoId");
 
                     b.ToTable("Order");
+                });
+
+            modelBuilder.Entity("EBISX_POS.API.Models.SaleType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Account")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SaleType");
                 });
 
             modelBuilder.Entity("EBISX_POS.API.Models.Timestamp", b =>
@@ -364,6 +419,25 @@ namespace EBISX_POS.API.Migrations
                     b.HasKey("UserEmail");
 
                     b.ToTable("User");
+                });
+
+            modelBuilder.Entity("EBISX_POS.API.Models.AlternativePayments", b =>
+                {
+                    b.HasOne("EBISX_POS.API.Models.Order", "Order")
+                        .WithMany("AlternativePayments")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EBISX_POS.API.Models.SaleType", "SaleType")
+                        .WithMany()
+                        .HasForeignKey("SaleTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("SaleType");
                 });
 
             modelBuilder.Entity("EBISX_POS.API.Models.CouponPromo", b =>
@@ -490,6 +564,8 @@ namespace EBISX_POS.API.Migrations
 
             modelBuilder.Entity("EBISX_POS.API.Models.Order", b =>
                 {
+                    b.Navigation("AlternativePayments");
+
                     b.Navigation("Coupon");
 
                     b.Navigation("Items");
