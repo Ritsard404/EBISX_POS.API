@@ -1,6 +1,7 @@
 ﻿using EBISX_POS.API.Data;
 using EBISX_POS.API.Models;
 using EBISX_POS.API.Models.Utils;
+using EBISX_POS.API.Services.DTO.Journal;
 using EBISX_POS.API.Services.DTO.Order;
 using EBISX_POS.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,7 @@ using System.Diagnostics;
 
 namespace EBISX_POS.API.Services.Repositories
 {
-    public class OrderRepository(DataContext _dataContext) : IOrder
+    public class OrderRepository(DataContext _dataContext, IJournal _journal) : IOrder
     {
         public async Task<(bool, string)> AddCurrentOrderVoid(AddCurrentOrderVoidDTO voidOrder)
         {
@@ -245,7 +246,7 @@ namespace EBISX_POS.API.Services.Repositories
             {
                 return (false, "Invalid Cashier Credential. Cashier:" + addPwdScDiscount.CashierEmail);
             }
-            if ( manager == null)
+            if (manager == null)
             {
                 return (false, "Invalid Manager Credential.");
             }
@@ -321,6 +322,18 @@ namespace EBISX_POS.API.Services.Repositories
                     }
                 }
             }
+
+            var (isSuccess, message) = await _journal.AddPwdScAccountJournal(new AddPwdScAccountJournalDTO
+            {
+                OrderId = currentOrder.Id,
+                EntryDate = DateTime.Now,
+                PwdScInfo = addPwdScDiscount.PwdScInfo
+                    .Select(x => new PwdScInfoDTO
+                    {
+                        Name = x.Name,
+                        OscaNum = x.OscaNum
+                    }).ToList()
+            });
 
             // Save changes to the database.
             await _dataContext.SaveChangesAsync();
@@ -587,21 +600,21 @@ namespace EBISX_POS.API.Services.Repositories
             //Fetch all non - voided items from pending orders for the cashier,
             //including related entities needed for the DTO.
 
-           var items = await _dataContext.Order
-               .Include(o => o.Items)
-               .Include(c => c.Coupon)
-               .Where(o => o.IsPending &&
-                           o.Cashier != null &&
-                           o.Cashier.UserEmail == cashierEmail &&
-                           o.Cashier.IsActive)
-               .SelectMany(o => o.Items)
-               .Where(i => !i.IsVoid)
-               .Include(i => i.Menu)
-               .Include(i => i.Drink)
-               .Include(i => i.AddOn)
-               .Include(i => i.Order)
-               .Include(i => i.Meal)
-               .ToListAsync();
+            var items = await _dataContext.Order
+                .Include(o => o.Items)
+                .Include(c => c.Coupon)
+                .Where(o => o.IsPending &&
+                            o.Cashier != null &&
+                            o.Cashier.UserEmail == cashierEmail &&
+                            o.Cashier.IsActive)
+                .SelectMany(o => o.Items)
+                .Where(i => !i.IsVoid)
+                .Include(i => i.Menu)
+                .Include(i => i.Drink)
+                .Include(i => i.AddOn)
+                .Include(i => i.Order)
+                .Include(i => i.Meal)
+                .ToListAsync();
 
             // Group items by EntryId.
             // For items with no EntryId (child meals), use the parent's EntryId from the Meal property.

@@ -6,7 +6,7 @@ namespace EBISX_POS.API.Data
 {
     public class JournalContext : DbContext
     {
-        public JournalContext(DbContextOptions<DataContext> options) : base(options)
+        public JournalContext(DbContextOptions<JournalContext> options) : base(options)
         {
 
         }
