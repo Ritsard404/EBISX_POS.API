@@ -20,5 +20,49 @@ namespace EBISX_POS.API.Controllers
             }
             return BadRequest(message);
         }
+
+        //[HttpPost]
+        //public async Task<IActionResult> AddItemsJournal(long orderId)
+        //{
+        //    var (success, message) = await _journal.AddItemsJournal(orderId);
+        //    if (success)
+        //    {
+        //        return Ok(message);
+        //    }
+        //    return BadRequest(message);
+        //}
+
+        //[HttpPost]
+        //public async Task<IActionResult> AddTendersJournal(long orderId)
+        //{
+        //    var (success, message) = await _journal.AddTendersJournal(orderId);
+        //    if (success)
+        //    {
+        //        return Ok(message);
+        //    }
+        //    return BadRequest(message);
+        //}
+
+        //[HttpPost]
+        //public async Task<IActionResult> AddTotalsJournal(long orderId)
+        //{
+        //    var (success, message) = await _journal.AddTotalsJournal(orderId);
+        //    if (success)
+        //    {
+        //        return Ok(message);
+        //    }
+        //    return BadRequest(message);
+        //}
+
+        //[HttpPost]
+        //public async Task<IActionResult> AddPwdScJournal(long orderId)
+        //{
+        //    var (success, message) = await _journal.AddPwdScJournal(orderId);
+        //    if (success)
+        //    {
+        //        return Ok(message);
+        //    }
+        //    return BadRequest(message);
+        //}
     }
 }

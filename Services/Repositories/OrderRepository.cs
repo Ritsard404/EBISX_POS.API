@@ -386,6 +386,13 @@ namespace EBISX_POS.API.Services.Repositories
                 item.VoidedAt = DateTimeOffset.Now;
             }
 
+
+
+            await _journal.AddItemsJournal(currentOrder.Id);
+            await _journal.AddTendersJournal(currentOrder.Id);
+            await _journal.AddTotalsJournal(currentOrder.Id);
+            await _journal.AddPwdScJournal(currentOrder.Id);
+
             // Persist changes to the database
             await _dataContext.SaveChangesAsync();
 
@@ -549,37 +556,17 @@ namespace EBISX_POS.API.Services.Repositories
             finishOrder.OrderType = finalizeOrder.OrderType;
             finishOrder.DiscountAmount = finalizeOrder.DiscountAmount;
 
+            await _journal.AddItemsJournal(finishOrder.Id);
+            await _journal.AddTendersJournal(finishOrder.Id);
+            await _journal.AddTotalsJournal(finishOrder.Id);
+
             await _dataContext.SaveChangesAsync();
 
-            return (true, "Order finished!");
+            return (true, finishOrder.Id.ToString());
         }
 
         public async Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string cashierEmail)
         {
-            //// Build base query
-            //var query = _dataContext.Order
-            //    .Include(o => o.Items)
-            //        .ThenInclude(i => i.Menu)
-            //    .Include(o => o.Items)
-            //        .ThenInclude(i => i.Drink)
-            //    .Include(o => o.Items)
-            //        .ThenInclude(i => i.AddOn)
-            //    .Include(o => o.Items)
-            //        .ThenInclude(i => i.Meal)
-            //    .Include(o => o.Coupon)
-            //    .Where(o => o.IsPending);
-
-            //if (!string.IsNullOrEmpty(cashierEmail))
-            //{
-            //    query = query.Where(o => o.Cashier != null
-            //                            && o.Cashier.UserEmail == cashierEmail
-            //                            && o.Cashier.IsActive);
-            //}
-
-            //var items = await query
-            //    .SelectMany(o => o.Items.Where(i => !i.IsVoid))
-            //    .ToListAsync();
-
             var cashier = await _dataContext.Order
                 .Include(o => o.Cashier)
                 .Where(s => s.IsPending)

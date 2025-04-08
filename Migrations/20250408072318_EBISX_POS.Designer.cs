@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250404035811_EBISX_POS")]
+    [Migration("20250408072318_EBISX_POS")]
     partial class EBISX_POS
     {
         /// <inheritdoc />
@@ -44,11 +44,11 @@ namespace EBISX_POS.API.Migrations
 
             modelBuilder.Entity("EBISX_POS.API.Models.AlternativePayments", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("bigint");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(65,30)");

@@ -13,5 +13,10 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<(bool isSuccess, string message)> AddPwdScAccountJournal(AddPwdScAccountJournalDTO journalDTO);
         Task<(bool isSuccess, string message)> UnpostPwdScAccountJournal(long orderId, string oscaNum);
 
+        Task<(bool isSuccess, string message)> AddPwdScJournal(long orderId);
+        Task<(bool isSuccess, string message)> AddItemsJournal(long orderId);
+        Task<(bool isSuccess, string message)> AddTendersJournal(long orderId);
+        Task<(bool isSuccess, string message)> AddTotalsJournal(long orderId);
+
     }
 }
