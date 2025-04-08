@@ -21,5 +21,6 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<(bool, string)> AvailCoupon(string cashierEmail, string managerEmail, string couponCode);
 
         Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string cashierEmail);
+        Task<List<string>> GetElligiblePWDSCDiscount(string cashierEmail);
     }
 }

@@ -6,6 +6,7 @@
         public required DateTime EntryDate { get; set; }
         public required List<PwdScInfoDTO> PwdScInfo { get; set; }
         public string? Status { get; set; } = "Posted";
+        public bool IsPWD { get; set; }
     }
     public class PwdScInfoDTO
     {

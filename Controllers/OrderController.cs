@@ -120,5 +120,14 @@ namespace EBISX_POS.API.Controllers
             return Ok(currentOrderItems);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetElligiblePWDSCDiscount(string cashierEmail)
+        {
+            var elligiblePwdScDisc = await _order.GetElligiblePWDSCDiscount(cashierEmail);
+
+            // Return the list (empty if no items found)
+            return Ok(elligiblePwdScDisc);
+        }
+
     }
 }

@@ -42,7 +42,7 @@ namespace EBISX_POS.API.Services.Repositories
                         AccountName = pwdOrSc.Name,
                         Reference = pwdOrSc.OscaNum,
                         EntryDate = journalDTO.EntryDate,
-                        EntryName = "Pwd/Sc",
+                        EntryName = journalDTO.IsPWD ? "PWD" : "Senior",
                         // Optionally, set other properties as needed.
                     };
 
