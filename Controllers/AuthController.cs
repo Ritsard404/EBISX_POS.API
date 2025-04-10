@@ -15,6 +15,15 @@ namespace EBISX_POS.API.Controllers
             return Ok(cashiers);
         }
 
+        [HttpGet()]
+        public async Task<IActionResult> IsCashedDrawer(string cashierEmail)
+        {
+            var isCashedDrawer = await _auth.IsCashedDrawer(cashierEmail);
+            if (!isCashedDrawer)
+                return BadRequest("Cash Drawer is not set!");
+            return Ok();
+        }
+
         [HttpGet]
         public async Task<IActionResult> HasPendingOrder()
         {
@@ -43,6 +52,17 @@ namespace EBISX_POS.API.Controllers
         {
 
             var (success, message) = await _auth.LogOut(new LogInDTO() { CashierEmail = cashierEmail, ManagerEmail = managerEmail });
+            if (!success)
+                return BadRequest(message);
+
+            return Ok(new { message });
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> SetCashInDrawer(string cashierEmail, decimal cash)
+        {
+
+            var (success, message) = await _auth.SetCashInDrawer(cashierEmail, cash);
             if (!success)
                 return BadRequest(message);
 

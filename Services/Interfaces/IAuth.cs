@@ -9,5 +9,8 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<(bool, string, string)> HasPendingOrder();
         Task<List<CashierDTO>> Cashiers();
 
+
+        Task<(bool, string)> SetCashInDrawer(string cashierEmail, decimal cash);
+        Task<bool> IsCashedDrawer(string cashierEmail);
     }
 }

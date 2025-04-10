@@ -59,6 +59,16 @@ namespace EBISX_POS.API.Services.Repositories
             return (false, "", "");
         }
 
+        public async Task<bool> IsCashedDrawer(string cashierEmail)
+        {
+
+            var timestamp = await _dataContext.Timestamp
+                .Include(t => t.Cashier)
+                .Where(t => t.Cashier.UserEmail == cashierEmail && t.TsOut == null && t.CashInDrawerAmount != null && t.CashInDrawerAmount >= 1000)
+                .FirstOrDefaultAsync();
+
+            return timestamp != null;
+        }
 
         public async Task<(bool, string, string)> LogIn(LogInDTO logInDTO)
         {
@@ -123,6 +133,23 @@ namespace EBISX_POS.API.Services.Repositories
             await _dataContext.SaveChangesAsync();
 
             return (true, "Cashier Logged Out!");
+        }
+
+        public async Task<(bool, string)> SetCashInDrawer(string cashierEmail, decimal cash)
+        {
+            var timestamp = await _dataContext.Timestamp
+                .Include(t => t.Cashier)
+                .Where(t => t.Cashier.UserEmail == cashierEmail && t.TsOut == null)
+                .FirstAsync();
+
+            timestamp.CashInDrawerAmount = cash;
+
+            if (timestamp.CashInDrawerAmount == null)
+                return (false, "Cash in drawer amount is null!");
+
+            await _dataContext.SaveChangesAsync();
+
+            return (true, "Cash in drawer set!");
         }
     }
 }
