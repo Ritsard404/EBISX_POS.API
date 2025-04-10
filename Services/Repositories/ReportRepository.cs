@@ -36,7 +36,7 @@ namespace EBISX_POS.API.Services.Repositories
 
             var phCulture = new CultureInfo("en-PH");
             string cashInDrawerText = timestamp.CashInDrawerAmount.Value.ToString("C", phCulture);
-            string currentCashDrawerText = totalCashInDrawer.ToString("C", phCulture);
+            string currentCashDrawerText = (timestamp.CashInDrawerAmount.Value + totalCashInDrawer).ToString("C", phCulture);
 
             return (cashInDrawerText, currentCashDrawerText);
         }
