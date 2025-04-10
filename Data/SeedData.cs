@@ -24,6 +24,22 @@ namespace EBISX_POS.API.Data
                     return;   // DB has been seeded
                 }
 
+                var terminal = new PosTerminalInfo
+                {
+                    PosSerialNumber = "POS-123456789",
+                    MinNumber = "MIN-987654321",
+                    AccreditationNumber = "ACC-00112233",
+                    PtuNumber = "PTU-44556677",
+                    DateIssued = new DateTime(2023, 1, 1),
+                    ValidUntil = new DateTime(2028, 1, 1),
+                    RegisteredName = "EBISX Food Services",
+                    Address = "123 Main Street, Cebu City",
+                    VatTinNumber = "123-456-789-000"
+                };
+
+                context.PosTerminalInfo.Add(terminal);
+
+
                 var users = new User[]
                 {
                     new User { UserEmail = "user1@example.com", UserFName = "John", UserLName = "Doe", UserRole = "Manager" },

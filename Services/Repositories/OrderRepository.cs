@@ -530,7 +530,7 @@ namespace EBISX_POS.API.Services.Repositories
             return (true, $"Quantity updated to {editOrder.qty}.");
         }
 
-        public async Task<(bool, string)> FinalizeOrder(FinalizeOrderDTO finalizeOrder)
+        public async Task<(bool IsSuccess, string Message, FinalizeOrderResponseDTO? Response)> FinalizeOrder(FinalizeOrderDTO finalizeOrder)
         {
             // Check if the cashier is valid and active
             var cashier = await _dataContext.User
@@ -538,32 +538,63 @@ namespace EBISX_POS.API.Services.Repositories
 
             if (cashier == null)
             {
-                return (false, "Cashier not found.");
+                return (false, "Cashier not found.", null);
             }
 
+            // Retrieve the pending order
             var finishOrder = await _dataContext.Order
                 .Include(o => o.Items)
                 .FirstOrDefaultAsync(o => o.IsPending);
 
             if (finishOrder == null)
             {
-                return (false, "No pending order found.");
+                return (false, "No pending order found.", null);
             }
 
+            // Retrieve terminal info (without tracking)
+            var terminal = await _dataContext.PosTerminalInfo.AsNoTracking().SingleOrDefaultAsync();
+
+            // Handle case if terminal info is not set up
+            if (terminal == null)
+            {
+                return (false, "POS terminal info is not configured.", null);
+            }
+
+            // Update order details
             finishOrder.IsPending = false;
             finishOrder.TotalAmount = finalizeOrder.TotalAmount;
             finishOrder.CashTendered = finalizeOrder.CashTendered;
             finishOrder.OrderType = finalizeOrder.OrderType;
             finishOrder.DiscountAmount = finalizeOrder.DiscountAmount;
 
+            // Add journal entries
             await _journal.AddItemsJournal(finishOrder.Id);
             await _journal.AddTendersJournal(finishOrder.Id);
             await _journal.AddTotalsJournal(finishOrder.Id);
 
+            // Save changes to the database
             await _dataContext.SaveChangesAsync();
 
-            return (true, finishOrder.Id.ToString());
+            // Prepare the response DTO
+            var response = new FinalizeOrderResponseDTO
+            {
+                InvoiceNumber = finishOrder.Id.ToString("D12"),  // Format invoice number to 12 digits
+                PosSerialNumber = terminal.PosSerialNumber,
+                MinNumber = terminal.MinNumber,
+                AccreditationNumber = terminal.AccreditationNumber,
+                PtuNumber = terminal.PtuNumber,
+                DateIssued = terminal.DateIssued.ToString("MM/dd/yyyy"),
+                ValidUntil = terminal.ValidUntil.ToString("MM/dd/yyyy"),
+                RegisteredName = terminal.RegisteredName,
+                Address = terminal.Address,
+                VatTinNumber = terminal.VatTinNumber,
+                InvoiceDate = DateTime.Now.ToString("MM/dd/yyyy")
+            };
+
+            // Return success with response DTO
+            return (true, "Order finalized successfully.", response);
         }
+
 
         public async Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string cashierEmail)
         {

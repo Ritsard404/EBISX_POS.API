@@ -15,6 +15,7 @@ namespace EBISX_POS.API.Models
         // The time when the cashier clocked out.
         public DateTimeOffset? TsOut { get; set; }
 
+        public decimal? CashInDrawerAmount { get; set; }
         // The cashier associated with this timestamp record (required).
         [Required]
         public required virtual User Cashier { get; set; }
@@ -27,7 +28,7 @@ namespace EBISX_POS.API.Models
         public User? ManagerOut { get; set; }
 
         // Computes the net work duration (clock-out minus clock-in, minus break duration if provided).
-        [NotMapped] 
+        [NotMapped]
         public TimeSpan? NetWorkDuration => (TsIn.HasValue && TsOut.HasValue) ? TsOut - TsIn : null;
 
     }

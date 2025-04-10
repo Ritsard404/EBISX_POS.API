@@ -5,11 +5,17 @@ using EBISX_POS.API.Services.DTO.Journal;
 using EBISX_POS.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Collections.ObjectModel;
 
 namespace EBISX_POS.API.Services.Repositories
 {
     public class JournalRepository(JournalContext _journal, DataContext _dataContext, ILogger<JournalRepository> _logger) : IJournal
     {
+        public async Task<List<AccountJournal>> AccountJournals()
+        {
+            return await _journal.AccountJournal.ToListAsync();
+        }
+
         //public async Task<(bool isSuccess, string message)> AddItemsJournal(long orderId)
         //{
 
@@ -290,7 +296,6 @@ namespace EBISX_POS.API.Services.Repositories
                 return (false, $"An error occurred: {ex.Message}");
             }
         }
-
 
         public async Task<(bool isSuccess, string message)> AddTendersJournal(long orderId)
         {

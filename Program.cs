@@ -36,6 +36,7 @@ builder.Services.AddScoped<IMenu, MenuRepository>();
 builder.Services.AddScoped<IOrder, OrderRepository>();
 builder.Services.AddScoped<IPayment, PaymentRepository>();
 builder.Services.AddScoped<IJournal, JournalRepository>();
+builder.Services.AddScoped<IEbisxAPI, EbisxAPIRepository>();
 builder.Services.AddLogging();
 
 // Add CORS

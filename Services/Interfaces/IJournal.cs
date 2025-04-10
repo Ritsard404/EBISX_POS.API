@@ -1,4 +1,6 @@
-﻿using EBISX_POS.API.Services.DTO.Journal;
+﻿using EBISX_POS.API.Models.Journal;
+using EBISX_POS.API.Services.DTO.Journal;
+using System.Collections.ObjectModel;
 
 namespace EBISX_POS.API.Services.Interfaces
 {
@@ -18,5 +20,7 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<(bool isSuccess, string message)> AddTendersJournal(long orderId);
         Task<(bool isSuccess, string message)> AddTotalsJournal(long orderId);
 
+
+        Task<List<AccountJournal>> AccountJournals();
     }
 }

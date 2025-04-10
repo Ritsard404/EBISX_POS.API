@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EBISX_POS.API.Models
 {
@@ -6,6 +7,7 @@ namespace EBISX_POS.API.Models
     {
         [Key]
         public long Id { get; set; }
+
         public required string OrderType { get; set; }
         public required decimal TotalAmount { get; set; }
         public decimal? CashTendered { get; set; }

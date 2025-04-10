@@ -103,13 +103,18 @@ namespace EBISX_POS.API.Controllers
         [HttpPut]
         public async Task<IActionResult> FinalizeOrder(FinalizeOrderDTO finalizeOrder)
         {
-            var (success, message) = await _order.FinalizeOrder(finalizeOrder);
+            var (success, message, response) = await _order.FinalizeOrder(finalizeOrder);
+
             if (success)
             {
-                return Ok(message);
+                // Return OK with the response DTO when success is true
+                return Ok(response);
             }
+
+            // Return BadRequest with the message when success is false
             return BadRequest(message);
         }
+
 
         [HttpGet]
         public async Task<IActionResult> GetCurrentOrderItems(string cashierEmail)

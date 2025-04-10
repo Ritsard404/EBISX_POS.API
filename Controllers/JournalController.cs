@@ -9,6 +9,11 @@ namespace EBISX_POS.API.Controllers
     [ApiController]
     public class JournalController(IJournal _journal) : ControllerBase
     {
+        [HttpGet]
+        public async Task<IActionResult> AccountJournals()
+        {
+            return Ok(await _journal.AccountJournals());
+        }
 
         [HttpPost]
         public async Task<IActionResult> AddPwdScAccountJournal(AddPwdScAccountJournalDTO journalDTO)

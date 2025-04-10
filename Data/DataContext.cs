@@ -20,6 +20,7 @@ namespace EBISX_POS.API.Data
         public DbSet<CouponPromo> CouponPromo { get; set; }
         public DbSet<SaleType> SaleType { get; set; }
         public DbSet<AlternativePayments> AlternativePayments { get; set; }
+        public DbSet<PosTerminalInfo> PosTerminalInfo { get; set; }
 
         // ✅ Auto-calculate subtotal before saving
         //public override int SaveChanges()
