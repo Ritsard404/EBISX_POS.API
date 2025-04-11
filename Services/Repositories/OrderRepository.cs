@@ -3,6 +3,7 @@ using EBISX_POS.API.Models;
 using EBISX_POS.API.Models.Utils;
 using EBISX_POS.API.Services.DTO.Journal;
 using EBISX_POS.API.Services.DTO.Order;
+using EBISX_POS.API.Services.DTO.Report;
 using EBISX_POS.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
@@ -566,6 +567,11 @@ namespace EBISX_POS.API.Services.Repositories
             finishOrder.CashTendered = finalizeOrder.CashTendered;
             finishOrder.OrderType = finalizeOrder.OrderType;
             finishOrder.DiscountAmount = finalizeOrder.DiscountAmount;
+            finishOrder.DueAmount = finalizeOrder.DueAmount;
+            finishOrder.TotalTendered = finalizeOrder.TotalTendered;
+            finishOrder.ChangeAmount = finalizeOrder.ChangeAmount;
+            finishOrder.VatExempt = finalizeOrder.VatExempt;
+            finishOrder.VatAmount = finalizeOrder.VatAmount;
 
             // Add journal entries
             await _journal.AddItemsJournal(finishOrder.Id);
@@ -978,3 +984,35 @@ namespace EBISX_POS.API.Services.Repositories
         }
     }
 }
+
+
+//order.Items
+//               .Select(i =>
+//               {
+//                   // Build a SubOrder instance so we can reuse its computed properties
+//                   var sub = new CurrentOrderItemsSubOrder
+//                   {
+//                       MenuId = i.Menu?.Id,
+//                       DrinkId = i.Drink?.Id,
+//                       AddOnId = i.AddOn?.Id,
+//                       Name = i.Menu?.MenuName
+//                                     ?? i.Drink?.MenuName
+//                                     ?? i.AddOn?.MenuName
+//                                     ?? "Unknown",
+//                       Size = i.Menu?.Size
+//                                     ?? i.Drink?.Size
+//                                     ?? i.AddOn?.Size,
+//                       ItemPrice = i.ItemPrice ?? 0m,
+//                       Quantity = i.ItemQTY ?? 1,
+//                       IsFirstItem = i.Meal == null
+//                   };
+
+//                   // Now project into your Invoice DTO
+//                   return new ItemDTO
+//                   {
+//                       Qty = sub.Quantity,
+//                       Description = sub.DisplayName,      // uses your DisplayName getter
+//                       Amount = sub.ItemPriceString   // uses your ItemPriceString getter
+//                   };
+//               })
+//               .ToList(),

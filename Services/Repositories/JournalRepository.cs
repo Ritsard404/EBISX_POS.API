@@ -103,7 +103,7 @@ namespace EBISX_POS.API.Services.Repositories
                     {
                         EntryNo = order.Id,
                         EntryLineNo = 3, // Adjust if needed
-                        Status = item.IsVoid ? "Unposted" : "Posted",
+                        Status = item.IsVoid ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
                         EntryName = item.EntryId ?? "",
                         AccountName = accountName,
                         EntryDate = item.createdAt.DateTime,
@@ -328,7 +328,7 @@ namespace EBISX_POS.API.Services.Repositories
                 {
                     EntryNo = order.Id,
                     EntryLineNo = 0,
-                    Status = order.IsCancelled ? "Unposted" : "Posted",
+                    Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
                     EntryName = "Cash Tendered",
                     AccountName = "Cash",                   // or pull from a config/account‑mapping
                     Description = "Cash Tendered",
@@ -347,7 +347,7 @@ namespace EBISX_POS.API.Services.Repositories
                     {
                         EntryNo = order.Id,
                         EntryLineNo = 0,
-                        Status = order.IsCancelled ? "Unposted" : "Posted",
+                        Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
                         EntryName = tender.SaleType.Name,
                         AccountName = tender.SaleType.Account,
                         Description = tender.SaleType.Type,
@@ -426,7 +426,7 @@ namespace EBISX_POS.API.Services.Repositories
                     EntryNo = order.Id,
                     EntryLineNo = 10,
                     EntryName = "Discount Amount",
-                    Status = order.IsCancelled ? "Unposted" : "Posted",
+                    Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
                     AccountName = discountAccount,
                     Description = "Discount",
                     Debit = Convert.ToDouble(order.DiscountAmount),
@@ -444,10 +444,48 @@ namespace EBISX_POS.API.Services.Repositories
                 EntryNo = order.Id,
                 EntryLineNo = 10,
                 EntryName = "Total Amount",
-                Status = order.IsCancelled ? "Unposted" : "Posted",
+                Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
                 AccountName = "Sales",           // change to your revenue GL account
                 Description = "Order Total",
                 Credit = Convert.ToDouble(order.TotalAmount),
+                EntryDate = order.CreatedAt.DateTime
+            });
+
+
+            journals.Add(new AccountJournal
+            {
+                EntryNo = order.Id,
+                EntryLineNo = 10,
+                EntryName = "VAT Amount",
+                Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
+                AccountName = "VAT",           // change to your revenue GL account
+                Description = "Order VAT",
+                Vatable = Convert.ToDouble(order.VatAmount),
+                EntryDate = order.CreatedAt.DateTime
+            });
+
+
+            journals.Add(new AccountJournal
+            {
+                EntryNo = order.Id,
+                EntryLineNo = 10,
+                EntryName = "VAT Exempt Amount",
+                Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
+                AccountName = "VAT Exempt",           // change to your revenue GL account
+                Description = "Order VAT Exempt",
+                Vatable = Convert.ToDouble(order.VatExempt),
+                EntryDate = order.CreatedAt.DateTime
+            });
+
+            journals.Add(new AccountJournal
+            {
+                EntryNo = order.Id,
+                EntryLineNo = 10,
+                EntryName = "Sub Total",
+                Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
+                AccountName = "SubTotalt",           // change to your revenue GL account
+                Description = "Order SubTotal",
+                SubTotal = Convert.ToDouble(order.DueAmount),
                 EntryDate = order.CreatedAt.DateTime
             });
 

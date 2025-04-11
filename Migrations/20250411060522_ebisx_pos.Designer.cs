@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250410071551_ebisx_pos")]
+    [Migration("20250411060522_ebisx_pos")]
     partial class ebisx_pos
     {
         /// <inheritdoc />
@@ -287,6 +287,9 @@ namespace EBISX_POS.API.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
+                    b.Property<decimal?>("ChangeAmount")
+                        .HasColumnType("decimal(65,30)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -295,6 +298,9 @@ namespace EBISX_POS.API.Migrations
 
                     b.Property<string>("DiscountType")
                         .HasColumnType("longtext");
+
+                    b.Property<decimal?>("DueAmount")
+                        .HasColumnType("decimal(65,30)");
 
                     b.Property<int?>("EligiblePwdScCount")
                         .HasColumnType("int");
@@ -306,6 +312,9 @@ namespace EBISX_POS.API.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("IsPending")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsReturned")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("ManagerUserEmail")
@@ -322,6 +331,15 @@ namespace EBISX_POS.API.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<decimal?>("TotalTendered")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<decimal?>("VatAmount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<decimal?>("VatExempt")
                         .HasColumnType("decimal(65,30)");
 
                     b.HasKey("Id");

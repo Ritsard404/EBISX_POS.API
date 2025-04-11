@@ -11,8 +11,15 @@ namespace EBISX_POS.API.Models
         public required string OrderType { get; set; }
         public required decimal TotalAmount { get; set; }
         public decimal? CashTendered { get; set; }
+        public decimal? DueAmount { get; set; }
+        public decimal? TotalTendered { get; set; }
+        public decimal? ChangeAmount { get; set; }
+        public decimal? VatExempt { get; set; }
+        public decimal? VatAmount { get; set; }
         public required DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
         public bool IsCancelled { get; set; } = false;
+        public bool IsReturned { get; set; } = false;
+        public bool IsRead { get; set; } = false;
         public bool IsPending { get; set; } = true;
 
         public string? DiscountType { get; set; }
