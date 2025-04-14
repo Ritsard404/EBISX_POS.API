@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace EBISX_POS.API.Services.Repositories
 {
-    public class AuthRepository(DataContext _dataContext, IConfiguration _config) : IAuth
+    public class AuthRepository(DataContext _dataContext) : IAuth
     {
         public async Task<List<CashierDTO>> Cashiers()
         {
@@ -150,6 +150,23 @@ namespace EBISX_POS.API.Services.Repositories
             await _dataContext.SaveChangesAsync();
 
             return (true, "Cash in drawer set!");
+        }
+
+        public async Task<(bool, string)> SetCashOutDrawer(string cashierEmail, decimal cash)
+        {
+            var timestamp = await _dataContext.Timestamp
+                .Include(t => t.Cashier)
+                .Where(t => t.Cashier.UserEmail == cashierEmail && t.TsOut == null)
+                .FirstAsync();
+
+            timestamp.CashOutDrawerAmount = cash;
+
+            if (timestamp.CashInDrawerAmount == null)
+                return (false, "Cash in drawer amount is null!");
+
+            await _dataContext.SaveChangesAsync();
+
+            return (true, "Cash out drawer set!");
         }
     }
 }

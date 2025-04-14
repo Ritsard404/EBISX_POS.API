@@ -68,5 +68,16 @@ namespace EBISX_POS.API.Controllers
 
             return Ok(new { message });
         }
+
+        [HttpPut]
+        public async Task<IActionResult> SetCashOutDrawer(string cashierEmail, decimal cash)
+        {
+
+            var (success, message) = await _auth.SetCashOutDrawer(cashierEmail, cash);
+            if (!success)
+                return BadRequest(message);
+
+            return Ok(new { message });
+        }
     }
 }

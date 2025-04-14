@@ -352,7 +352,7 @@ namespace EBISX_POS.API.Services.Repositories
                         AccountName = tender.SaleType.Account,
                         Description = tender.SaleType.Type,
                         Reference = tender.Reference,
-                        Credit = Convert.ToDouble(tender.Amount),
+                        Debit = Convert.ToDouble(tender.Amount),
                         EntryDate = order.CreatedAt.DateTime
                     };
 
@@ -447,7 +447,7 @@ namespace EBISX_POS.API.Services.Repositories
                 Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
                 AccountName = "Sales",           // change to your revenue GL account
                 Description = "Order Total",
-                Credit = Convert.ToDouble(order.TotalAmount),
+                Debit = Convert.ToDouble(order.TotalAmount),
                 EntryDate = order.CreatedAt.DateTime
             });
 

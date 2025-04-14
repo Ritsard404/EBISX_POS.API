@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250411060522_ebisx_pos")]
+    [Migration("20250414021000_ebisx_pos")]
     partial class ebisx_pos
     {
         /// <inheritdoc />
@@ -314,6 +314,9 @@ namespace EBISX_POS.API.Migrations
                     b.Property<bool>("IsPending")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("IsReturned")
                         .HasColumnType("tinyint(1)");
 
@@ -373,6 +376,10 @@ namespace EBISX_POS.API.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("OperatedBy")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<string>("PtuNumber")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -427,6 +434,9 @@ namespace EBISX_POS.API.Migrations
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal?>("CashInDrawerAmount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<decimal?>("CashOutDrawerAmount")
                         .HasColumnType("decimal(65,30)");
 
                     b.Property<string>("CashierUserEmail")

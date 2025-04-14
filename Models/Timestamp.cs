@@ -16,6 +16,7 @@ namespace EBISX_POS.API.Models
         public DateTimeOffset? TsOut { get; set; }
 
         public decimal? CashInDrawerAmount { get; set; }
+        public decimal? CashOutDrawerAmount { get; set; }
         // The cashier associated with this timestamp record (required).
         [Required]
         public required virtual User Cashier { get; set; }

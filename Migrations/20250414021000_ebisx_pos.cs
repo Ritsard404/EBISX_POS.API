@@ -76,6 +76,8 @@ namespace EBISX_POS.API.Migrations
                     ValidUntil = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     RegisteredName = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    OperatedBy = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     Address = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     VatTinNumber = table.Column<string>(type: "longtext", nullable: false)
@@ -135,6 +137,7 @@ namespace EBISX_POS.API.Migrations
                     TsIn = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     TsOut = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
                     CashInDrawerAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
+                    CashOutDrawerAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
                     CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     ManagerInUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
@@ -282,6 +285,7 @@ namespace EBISX_POS.API.Migrations
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     IsCancelled = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     IsReturned = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    IsRead = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     IsPending = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     DiscountType = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),

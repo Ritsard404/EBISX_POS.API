@@ -292,5 +292,85 @@ namespace EBISX_POS.API.Services.Repositories
             return groupedItems;
         }
 
+        public async Task<XInvoiceReportDTO> XInvoiceReport()
+        {
+            var orders = await _dataContext.Order
+                .Include(o => o.Cashier)
+                .Include(o => o.Items)
+                .Include(o => o.AlternativePayments)
+                    .ThenInclude(ap => ap.SaleType)
+                .Where(o => !o.IsRead)
+                .ToListAsync();
+
+            var posInfo = await _dataContext.PosTerminalInfo.FirstOrDefaultAsync();
+            var ts = await _dataContext.Timestamp
+                .Include(t => t.Cashier)
+                .OrderBy(t => t.Id)
+                .LastOrDefaultAsync();
+
+            var pesoCulture = new CultureInfo("en-PH");
+
+            // compute decimals
+            decimal openingFundDec = ts?.CashInDrawerAmount ?? 0m;
+            decimal voidDec = orders.Where(o => o.IsCancelled).Sum(o => o.TotalAmount);
+            decimal refundDec = orders.Where(o => o.IsReturned).Sum(o => o.TotalAmount);
+            decimal shortOverDec = openingFundDec
+                                   + orders.Where(o => !o.IsCancelled && !o.IsReturned).Sum(o => o.TotalAmount)
+                                   - (ts?.CashOutDrawerAmount ?? 0m);
+
+            // build Payments & Summary (they stay numeric)
+            var payments = new Payments
+            {
+                Cash = orders.Sum(o => o.CashTendered ?? 0m),
+                OtherPayments = orders
+                    .SelectMany(o => o.AlternativePayments)
+                    .GroupBy(ap => ap.SaleType.Name)
+                    .Select(g => new PaymentDetail
+                    {
+                        Name = g.Key,
+                        Amount = g.Sum(x => x.Amount),
+                    }).ToList()
+            };
+
+            var summary = new TransactionSummary
+            {
+                CashInDrawer = (ts?.CashOutDrawerAmount ?? 0m).ToString("C", pesoCulture),
+                OtherPayments = payments.OtherPayments
+            };
+
+            var dto = new XInvoiceReportDTO
+            {
+                BusinessName = posInfo?.RegisteredName ?? "",
+                OperatorName = posInfo?.OperatedBy ?? "",
+                AddressLine = posInfo?.Address ?? "",
+                VatRegTin = posInfo?.VatTinNumber ?? "",
+                Min = posInfo?.MinNumber ?? "",
+                SerialNumber = posInfo?.PosSerialNumber ?? "",
+
+                ReportDate = DateTime.Now.ToString("MMMM dd, yyyy", pesoCulture),
+                ReportTime = DateTime.Now.ToString("hh:mm tt", pesoCulture),
+                StartDateTime = orders.First().CreatedAt.LocalDateTime.ToString("MM/dd/yy  hh:mm tt", pesoCulture),
+                EndDateTime = orders.Last().CreatedAt.LocalDateTime.ToString("MM/dd/yy  hh:mm tt", pesoCulture),
+
+                Cashier = ts?.Cashier.UserFName + " " + ts?.Cashier.UserLName,
+                BeginningOrNumber = orders.First().Id.ToString("D12"),
+                EndingOrNumber = orders.Last().Id.ToString("D12"),
+
+                OpeningFund = openingFundDec.ToString("C", pesoCulture),
+                VoidAmount = voidDec.ToString("C", pesoCulture),
+                Refund = refundDec.ToString("C", pesoCulture),
+
+                Payments = payments,
+                TransactionSummary = summary,
+
+                ShortOver = shortOverDec.ToString("C", pesoCulture)
+            };
+
+            foreach (var order in orders)
+                order.IsRead = true;
+            await _dataContext.SaveChangesAsync();
+
+            return dto;
+        }
     }
 }

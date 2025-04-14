@@ -33,6 +33,7 @@ namespace EBISX_POS.API.Data
                     DateIssued = new DateTime(2023, 1, 1),
                     ValidUntil = new DateTime(2028, 1, 1),
                     RegisteredName = "EBISX Food Services",
+                    OperatedBy = "EBISX Food, Inc.",
                     Address = "123 Main Street, Cebu City",
                     VatTinNumber = "123-456-789-000"
                 };

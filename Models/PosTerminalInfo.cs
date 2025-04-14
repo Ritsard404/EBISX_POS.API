@@ -16,6 +16,7 @@ namespace EBISX_POS.API.Models
 
         // Business details
         public required string RegisteredName { get; set; } // registered name of the business.
+        public required string OperatedBy { get; set; }
         public required string Address { get; set; } // address of the business.
         public required string VatTinNumber { get; set; } // VAT (Value Added Tax) TIN (Tax Identification Number) of the business.
     }
