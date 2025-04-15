@@ -211,6 +211,45 @@ namespace EBISX_POS.API.Migrations
                     b.ToTable("Item");
                 });
 
+            modelBuilder.Entity("EBISX_POS.API.Models.ManagerLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ManagerUserEmail")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<long?>("OrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("TimestampId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("WithdrawAmount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ManagerUserEmail");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("TimestampId");
+
+                    b.ToTable("ManagerLog");
+                });
+
             modelBuilder.Entity("EBISX_POS.API.Models.Menu", b =>
                 {
                     b.Property<int>("Id")
@@ -317,9 +356,6 @@ namespace EBISX_POS.API.Migrations
                     b.Property<bool>("IsReturned")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<string>("ManagerUserEmail")
-                        .HasColumnType("varchar(255)");
-
                     b.Property<string>("OSCAIdsNum")
                         .HasColumnType("longtext");
 
@@ -342,11 +378,12 @@ namespace EBISX_POS.API.Migrations
                     b.Property<decimal?>("VatExempt")
                         .HasColumnType("decimal(65,30)");
 
+                    b.Property<decimal?>("VatSales")
+                        .HasColumnType("decimal(65,30)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CashierUserEmail");
-
-                    b.HasIndex("ManagerUserEmail");
 
                     b.HasIndex("PromoId");
 
@@ -385,12 +422,18 @@ namespace EBISX_POS.API.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<int>("ResetCounterNo")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("ValidUntil")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("VatTinNumber")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<int>("ZCounterNo")
+                        .HasColumnType("int");
 
                     b.HasKey("PosSerialNumber");
 
@@ -550,6 +593,27 @@ namespace EBISX_POS.API.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("EBISX_POS.API.Models.ManagerLog", b =>
+                {
+                    b.HasOne("EBISX_POS.API.Models.User", "Manager")
+                        .WithMany()
+                        .HasForeignKey("ManagerUserEmail")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EBISX_POS.API.Models.Order", null)
+                        .WithMany("ManagerLog")
+                        .HasForeignKey("OrderId");
+
+                    b.HasOne("EBISX_POS.API.Models.Timestamp", "Timestamp")
+                        .WithMany("ManagerLog")
+                        .HasForeignKey("TimestampId");
+
+                    b.Navigation("Manager");
+
+                    b.Navigation("Timestamp");
+                });
+
             modelBuilder.Entity("EBISX_POS.API.Models.Menu", b =>
                 {
                     b.HasOne("EBISX_POS.API.Models.AddOnType", "AddOnType")
@@ -585,17 +649,11 @@ namespace EBISX_POS.API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EBISX_POS.API.Models.User", "Manager")
-                        .WithMany()
-                        .HasForeignKey("ManagerUserEmail");
-
                     b.HasOne("EBISX_POS.API.Models.CouponPromo", "Promo")
                         .WithMany()
                         .HasForeignKey("PromoId");
 
                     b.Navigation("Cashier");
-
-                    b.Navigation("Manager");
 
                     b.Navigation("Promo");
                 });
@@ -637,6 +695,13 @@ namespace EBISX_POS.API.Migrations
                     b.Navigation("Coupon");
 
                     b.Navigation("Items");
+
+                    b.Navigation("ManagerLog");
+                });
+
+            modelBuilder.Entity("EBISX_POS.API.Models.Timestamp", b =>
+                {
+                    b.Navigation("ManagerLog");
                 });
 #pragma warning restore 612, 618
         }

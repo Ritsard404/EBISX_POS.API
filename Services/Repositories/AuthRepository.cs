@@ -26,6 +26,39 @@ namespace EBISX_POS.API.Services.Repositories
 
             return cashiers;
         }
+
+        public async Task<(bool, string)> CashWithdrawDrawer(string cashierEmail, string managerEmail, decimal cash)
+        {
+            var timestamp = await _dataContext.Timestamp
+                .Include(t => t.Cashier)
+                .Include(t => t.ManagerLog)
+                .FirstOrDefaultAsync(t => t.Cashier.UserEmail == cashierEmail && t.TsOut == null);
+
+            var manager = await _dataContext.User
+                .FirstOrDefaultAsync(m => m.UserEmail == managerEmail && m.UserRole != "Cashier" && m.IsActive);
+
+            if (timestamp?.CashInDrawerAmount is not { } available)
+                return (false, "No active session or drawer amount not set.");
+
+            if (cash > available)
+                return (false, "Withdrawal exceeds drawer balance.");
+
+            if (manager is null)
+                return (false, "Invalid manager credentials.");
+
+            timestamp.ManagerLog.Add(new ManagerLog
+            {
+                Manager = manager,
+                WithdrawAmount = cash,
+                Timestamp = timestamp,
+                Action = "Withdrawal"
+            });
+
+            await _dataContext.SaveChangesAsync();
+            return (true, "Cash withdrawal recorded.");
+        }
+
+
         public async Task<(bool, string, string)> HasPendingOrder()
         {
             // Check if there's a pending order with a related cashier.

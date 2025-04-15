@@ -19,5 +19,8 @@ namespace EBISX_POS.API.Models
         public required string OperatedBy { get; set; }
         public required string Address { get; set; } // address of the business.
         public required string VatTinNumber { get; set; } // VAT (Value Added Tax) TIN (Tax Identification Number) of the business.
+
+        public int ResetCounterNo { get; set; } = 0;
+        public int ZCounterNo { get; set; } = 0;
     }
 }

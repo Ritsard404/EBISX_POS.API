@@ -332,7 +332,8 @@ namespace EBISX_POS.API.Services.Repositories
                     EntryName = "Cash Tendered",
                     AccountName = "Cash",                   // or pull from a config/account‑mapping
                     Description = "Cash Tendered",
-                    Debit = Convert.ToDouble(order.CashTendered),
+                    Debit = order.IsReturned ? 0 : Convert.ToDouble(order.CashTendered),
+                    Credit = order.IsReturned ? Convert.ToDouble(order.CashTendered) : 0,
                     EntryDate = order.CreatedAt.DateTime           // assuming CreatedAt is DateTime
                 });
             }
@@ -352,7 +353,8 @@ namespace EBISX_POS.API.Services.Repositories
                         AccountName = tender.SaleType.Account,
                         Description = tender.SaleType.Type,
                         Reference = tender.Reference,
-                        Debit = Convert.ToDouble(tender.Amount),
+                        Debit = order.IsReturned ? 0 : Convert.ToDouble(tender.Amount),
+                        Credit = order.IsReturned ? Convert.ToDouble(tender.Amount) : 0,
                         EntryDate = order.CreatedAt.DateTime
                     };
 
@@ -429,7 +431,8 @@ namespace EBISX_POS.API.Services.Repositories
                     Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
                     AccountName = discountAccount,
                     Description = "Discount",
-                    Debit = Convert.ToDouble(order.DiscountAmount),
+                    Debit = order.IsReturned ? 0 : Convert.ToDouble(order.DiscountAmount),
+                    Credit = order.IsReturned ? Convert.ToDouble(order.DiscountAmount) : 0,
                     EntryDate = order.CreatedAt.DateTime    // assuming CreatedAt is DateTime
                 });
 
@@ -447,7 +450,8 @@ namespace EBISX_POS.API.Services.Repositories
                 Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
                 AccountName = "Sales",           // change to your revenue GL account
                 Description = "Order Total",
-                Debit = Convert.ToDouble(order.TotalAmount),
+                Debit = order.IsReturned ? 0 : Convert.ToDouble(order.TotalAmount),
+                Credit = order.IsReturned ? Convert.ToDouble(order.TotalAmount) : 0,
                 EntryDate = order.CreatedAt.DateTime
             });
 

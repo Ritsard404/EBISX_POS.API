@@ -81,7 +81,9 @@ namespace EBISX_POS.API.Migrations
                     Address = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     VatTinNumber = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4")
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ResetCounterNo = table.Column<int>(type: "int", nullable: false),
+                    ZCounterNo = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -280,6 +282,7 @@ namespace EBISX_POS.API.Migrations
                     DueAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
                     TotalTendered = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
                     ChangeAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
+                    VatSales = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
                     VatExempt = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
                     VatAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
@@ -297,8 +300,6 @@ namespace EBISX_POS.API.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     PromoId = table.Column<int>(type: "int", nullable: true),
                     CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    ManagerUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
@@ -315,11 +316,6 @@ namespace EBISX_POS.API.Migrations
                         principalTable: "User",
                         principalColumn: "UserEmail",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Order_User_ManagerUserEmail",
-                        column: x => x.ManagerUserEmail,
-                        principalTable: "User",
-                        principalColumn: "UserEmail");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -376,6 +372,43 @@ namespace EBISX_POS.API.Migrations
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
+            migrationBuilder.CreateTable(
+                name: "ManagerLog",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    TimestampId = table.Column<int>(type: "int", nullable: true),
+                    ManagerUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Action = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    WithdrawAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    OrderId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ManagerLog", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ManagerLog_Order_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Order",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ManagerLog_Timestamp_TimestampId",
+                        column: x => x.TimestampId,
+                        principalTable: "Timestamp",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ManagerLog_User_ManagerUserEmail",
+                        column: x => x.ManagerUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
             migrationBuilder.CreateIndex(
                 name: "IX_AlternativePayments_OrderId",
                 table: "AlternativePayments",
@@ -417,6 +450,21 @@ namespace EBISX_POS.API.Migrations
                 column: "OrderId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ManagerLog_ManagerUserEmail",
+                table: "ManagerLog",
+                column: "ManagerUserEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ManagerLog_OrderId",
+                table: "ManagerLog",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ManagerLog_TimestampId",
+                table: "ManagerLog",
+                column: "TimestampId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Menu_AddOnTypeId",
                 table: "Menu",
                 column: "AddOnTypeId");
@@ -440,11 +488,6 @@ namespace EBISX_POS.API.Migrations
                 name: "IX_Order_CashierUserEmail",
                 table: "Order",
                 column: "CashierUserEmail");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Order_ManagerUserEmail",
-                table: "Order",
-                column: "ManagerUserEmail");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Order_PromoId",
@@ -496,16 +539,19 @@ namespace EBISX_POS.API.Migrations
                 name: "Item");
 
             migrationBuilder.DropTable(
-                name: "PosTerminalInfo");
+                name: "ManagerLog");
 
             migrationBuilder.DropTable(
-                name: "Timestamp");
+                name: "PosTerminalInfo");
 
             migrationBuilder.DropTable(
                 name: "SaleType");
 
             migrationBuilder.DropTable(
                 name: "Menu");
+
+            migrationBuilder.DropTable(
+                name: "Timestamp");
 
             migrationBuilder.DropTable(
                 name: "AddOnType");

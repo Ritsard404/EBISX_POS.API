@@ -1,80 +1,92 @@
-﻿namespace EBISX_POS.API.Services.DTO.Report
+﻿using System.Globalization;
+using System.Text.Json.Serialization;
+
+namespace EBISX_POS.API.Services.DTO.Report
 {
     public class ZInvoiceReportDTO
     {
-        // Business Info
-        public string BusinessName { get; set; } = string.Empty;
-        public string OperatorName { get; set; } = string.Empty;
-        public string AddressLine { get; set; } = string.Empty;
-        public string VatRegTin { get; set; } = string.Empty;
-        public string Min { get; set; } = string.Empty;
-        public string SerialNumber { get; set; } = string.Empty;
+        // Business Header
+        public required string BusinessName { get; set; }
+        public required string OperatorName { get; set; }
+        public required string AddressLine { get; set; }
+        public required string VatRegTin { get; set; }
+        public required string Min { get; set; }
+        public required string SerialNumber { get; set; }
 
         // Report Info
-        public string ReportDate { get; set; } = string.Empty;
-        public string ReportTime { get; set; } = string.Empty;
-        public string StartDateTime { get; set; } = string.Empty;
-        public string EndDateTime { get; set; } = string.Empty;
+        public required string ReportDate { get; set; }
+        public required string ReportTime { get; set; }
+        public required string StartDateTime { get; set; }
+        public required string EndDateTime { get; set; }
 
-        // Serial/Reference Numbers
-        public string BeginningSiNumber { get; set; } = string.Empty;
-        public string EndingSiNumber { get; set; } = string.Empty;
-        public string BeginningVoidNumber { get; set; } = string.Empty;
-        public string EndingVoidNumber { get; set; } = string.Empty;
-        public string BeginningReturnNumber { get; set; } = string.Empty;
-        public string EndingReturnNumber { get; set; } = string.Empty;
+        // Invoice Numbers
+        public required string BeginningSI { get; set; }
+        public required string EndingSI { get; set; }
+        public required string BeginningVoid { get; set; }
+        public required string EndingVoid { get; set; }
+        public required string BeginningReturn { get; set; }
+        public required string EndingReturn { get; set; }
 
-        // Counters
-        public string ResetCounterNo { get; set; } = string.Empty;
-        public string ZCounterNo { get; set; } = string.Empty;
+        // Counter Info
+        public required string ResetCounter { get; set; }
+        public required string ZCounter { get; set; }
 
-        // Accumulated Sales
-        public string PresentAccumulatedSales { get; set; } = string.Empty;
-        public string PreviousAccumulatedSales { get; set; } = string.Empty;
-        public string SalesForTheDay { get; set; } = string.Empty;
+        // Sales Summary
+        public required string PresentAccumulatedSales { get; set; }
+        public required string PreviousAccumulatedSales { get; set; }
+        public required string SalesForTheDay { get; set; }
 
-        // Breakdown of Sales
-        public string VatableSales { get; set; } = string.Empty;
-        public string VatAmount { get; set; } = string.Empty;
-        public string VatExemptSales { get; set; } = string.Empty;
-        public string ZeroRatedSales { get; set; } = string.Empty;
-        public string GrossAmount { get; set; } = string.Empty;
-        public string Discount { get; set; } = string.Empty;
-        public string Return { get; set; } = string.Empty;
-        public string Void { get; set; } = string.Empty;
-        public string VatAdjustment { get; set; } = string.Empty;
-        public string NetAmount { get; set; } = string.Empty;
+        public required SalesBreakdown SalesBreakdown { get; set; }
+        public required DiscountSummary DiscountSummary { get; set; }
+        public required SalesAdjustment SalesAdjustment { get; set; }
+        public required VatAdjustment VatAdjustment { get; set; }
 
-        // Discount Summary
-        public string ScDiscount { get; set; } = string.Empty;
-        public string PwdDiscount { get; set; } = string.Empty;
-        public string NaacDiscount { get; set; } = string.Empty;
-        public string SoloParentDiscount { get; set; } = string.Empty;
-        public string OtherDiscount { get; set; } = string.Empty;
+        public required TransactionSummary TransactionSummary { get; set; }
 
-        // VAT Adjustments
-        public string ScVatTrans { get; set; } = string.Empty;
-        public string PwdVatTrans { get; set; } = string.Empty;
-        public string RegDiscVatTrans { get; set; } = string.Empty;
-        public string ZeroRatedTrans { get; set; } = string.Empty;
-        public string VatOnReturn { get; set; } = string.Empty;
-        public string OtherVatAdjustments { get; set; } = string.Empty;
+        public required string OpeningFund { get; set; }
+        public required string Withdrawal { get; set; }
+        public required string PaymentsReceived { get; set; }
 
-        // Transaction Summary
-        public string CashInDrawer { get; set; } = string.Empty;
-        public List<PaymentItemString> OtherPayments { get; set; } = new();
-        public string OpeningFund { get; set; } = string.Empty;
-        public string Withdrawal { get; set; } = string.Empty;
-        public string PaymentsReceived { get; set; } = string.Empty;
-
-        // Short/Over
-        public string ShortOver { get; set; } = string.Empty;
+        public required string ShortOver { get; set; }
     }
 
-    public class PaymentItemString
+    // Sub-DTOs
+
+    public class SalesBreakdown
     {
-        public string Name { get; set; } = string.Empty;
-        public string Amount { get; set; } = string.Empty;
+        public required string VatableSales { get; set; }
+        public required string VatAmount { get; set; }
+        public required string VatExemptSales { get; set; }
+        public required string ZeroRatedSales { get; set; }
+
+        public required string GrossAmount { get; set; }
+        public required string LessDiscount { get; set; }
+        public required string LessReturn { get; set; }
+        public required string LessVoid { get; set; }
+        public required string LessVatAdjustment { get; set; }
+        public required string NetAmount { get; set; }
     }
 
+    public class DiscountSummary
+    {
+        public required string SeniorCitizen { get; set; }
+        public required string PWD { get; set; }
+        public required string Other { get; set; }
+    }
+
+    public class SalesAdjustment
+    {
+        public required string Void { get; set; }
+        public required string Return { get; set; }
+    }
+
+    public class VatAdjustment
+    {
+        public required string SCTrans { get; set; }
+        public required string PWDTrans { get; set; }
+        public required string RegDiscTrans { get; set; }
+        public required string ZeroRatedTrans { get; set; }
+        public required string VatOnReturn { get; set; }
+        public required string OtherAdjustments { get; set; }
+    }
 }

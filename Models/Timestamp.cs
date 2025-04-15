@@ -15,8 +15,12 @@ namespace EBISX_POS.API.Models
         // The time when the cashier clocked out.
         public DateTimeOffset? TsOut { get; set; }
 
-        public decimal? CashInDrawerAmount { get; set; }
-        public decimal? CashOutDrawerAmount { get; set; }
+        public decimal? CashInDrawerAmount { get; set; } = 0;
+        public decimal? CashOutDrawerAmount { get; set; } = 0;
+        //public decimal? CashWithdrawAmount { get; set; } = 0;
+        public ICollection<ManagerLog> ManagerLog { get; set; }
+            = new List<ManagerLog>(); 
+        
         // The cashier associated with this timestamp record (required).
         [Required]
         public required virtual User Cashier { get; set; }

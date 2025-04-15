@@ -8,5 +8,6 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<List<GetInvoicesDTO>> GetInvoicesByDate(DateTime dateTime);
         Task<List<GetInvoiceDTO>> GetInvoiceById(long invId);
         Task<XInvoiceReportDTO> XInvoiceReport();
+        Task<ZInvoiceReportDTO> ZInvoiceReport();
     }
 }

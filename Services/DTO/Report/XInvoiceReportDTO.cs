@@ -27,7 +27,7 @@ namespace EBISX_POS.API.Services.DTO.Report
         public required Payments Payments { get; set; }
         public required string VoidAmount { get; set; }
         public required string Refund { get; set; }
-        //public decimal Withdrawal { get; set; }
+        public required string Withdrawal { get; set; }
 
         public required TransactionSummary TransactionSummary { get; set; }
 

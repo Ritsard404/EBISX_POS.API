@@ -14,6 +14,7 @@ namespace EBISX_POS.API.Models
         public decimal? DueAmount { get; set; }
         public decimal? TotalTendered { get; set; }
         public decimal? ChangeAmount { get; set; }
+        public decimal? VatSales { get; set; }
         public decimal? VatExempt { get; set; }
         public decimal? VatAmount { get; set; }
         public required DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
@@ -31,7 +32,7 @@ namespace EBISX_POS.API.Models
         public CouponPromo? Promo { get; set; }
 
         public required User Cashier { get; set; }
-        public User? Manager { get; set; }
+        public ICollection<ManagerLog>? ManagerLog { get; set; } = new List<ManagerLog>();
 
         // Navigation property for related Items
         public ICollection<Item> Items { get; set; } = new List<Item>();

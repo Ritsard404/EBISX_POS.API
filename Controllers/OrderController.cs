@@ -67,6 +67,17 @@ namespace EBISX_POS.API.Controllers
         }
 
         [HttpPut]
+        public async Task<IActionResult> RefundOrder(string managerEmail, long orderId)
+        {
+            var (success, message) = await _order.RefundOrder(managerEmail, orderId);
+            if (success)
+            {
+                return Ok(message);
+            }
+            return BadRequest(message);
+        }
+
+        [HttpPut]
         public async Task<IActionResult> AddPwdScDiscount(AddPwdScDiscountDTO addPwdScDiscount)
         {
             var (success, message) = await _order.AddPwdScDiscount(addPwdScDiscount);

@@ -294,83 +294,311 @@ namespace EBISX_POS.API.Services.Repositories
 
         public async Task<XInvoiceReportDTO> XInvoiceReport()
         {
+            var pesoCulture = new CultureInfo("en-PH");
+            var defaultDecimal = 0m;
+            var defaultDate = new DateTime(2000, 1, 1);
+
+            // Safely fetch data with null checks
             var orders = await _dataContext.Order
                 .Include(o => o.Cashier)
                 .Include(o => o.Items)
                 .Include(o => o.AlternativePayments)
                     .ThenInclude(ap => ap.SaleType)
                 .Where(o => !o.IsRead)
-                .ToListAsync();
+                .ToListAsync() ?? new List<Order>();
 
             var posInfo = await _dataContext.PosTerminalInfo.FirstOrDefaultAsync();
+            if (posInfo == null)
+            {
+                throw new InvalidOperationException("POS terminal information not configured");
+            }
+
             var ts = await _dataContext.Timestamp
                 .Include(t => t.Cashier)
+                .Include(t => t.ManagerLog)
                 .OrderBy(t => t.Id)
                 .LastOrDefaultAsync();
 
-            var pesoCulture = new CultureInfo("en-PH");
+            // Handle empty orders scenario
+            var firstOrder = orders.FirstOrDefault();
+            var lastOrder = orders.LastOrDefault();
 
-            // compute decimals
-            decimal openingFundDec = ts?.CashInDrawerAmount ?? 0m;
-            decimal voidDec = orders.Where(o => o.IsCancelled).Sum(o => o.TotalAmount);
-            decimal refundDec = orders.Where(o => o.IsReturned).Sum(o => o.TotalAmount);
-            decimal shortOverDec = openingFundDec
-                                   + orders.Where(o => !o.IsCancelled && !o.IsReturned).Sum(o => o.TotalAmount)
-                                   - (ts?.CashOutDrawerAmount ?? 0m);
+            // Calculate financials with null protection
+            decimal openingFundDec = ts?.CashInDrawerAmount ?? defaultDecimal;
+            decimal withdrawnAmount = await _dataContext.ManagerLog
+                .Where(mw => mw.Timestamp == ts)
+                .SumAsync(mw => mw.WithdrawAmount);
 
-            // build Payments & Summary (they stay numeric)
+            decimal voidDec = orders.Where(o => o.IsCancelled)
+                                  .Sum(o => o?.TotalAmount ?? defaultDecimal);
+            decimal refundDec = orders.Where(o => o.IsReturned)
+                                    .Sum(o => o?.TotalAmount ?? defaultDecimal);
+
+            decimal validOrdersTotal = orders.Where(o => !o.IsCancelled && !o.IsReturned)
+                                           .Sum(o => o?.TotalAmount ?? defaultDecimal);
+
+            decimal shortOverDec = openingFundDec + validOrdersTotal
+                                 - ((ts?.CashOutDrawerAmount ?? defaultDecimal) - withdrawnAmount);
+
+            // Safe payment processing
             var payments = new Payments
             {
-                Cash = orders.Sum(o => o.CashTendered ?? 0m),
+                Cash = orders.Sum(o => o?.CashTendered ?? defaultDecimal),
                 OtherPayments = orders
-                    .SelectMany(o => o.AlternativePayments)
-                    .GroupBy(ap => ap.SaleType.Name)
+                    .SelectMany(o => o.AlternativePayments ?? new List<AlternativePayments>())
+                    .GroupBy(ap => ap.SaleType?.Name ?? "Unknown")
                     .Select(g => new PaymentDetail
                     {
                         Name = g.Key,
-                        Amount = g.Sum(x => x.Amount),
+                        Amount = g.Sum(x => x?.Amount ?? defaultDecimal)
                     }).ToList()
             };
 
             var summary = new TransactionSummary
             {
-                CashInDrawer = (ts?.CashOutDrawerAmount ?? 0m).ToString("C", pesoCulture),
+                CashInDrawer = ((ts?.CashOutDrawerAmount ?? defaultDecimal) - withdrawnAmount)
+                              .ToString("C", pesoCulture),
                 OtherPayments = payments.OtherPayments
             };
 
+            // Build DTO with safe values
             var dto = new XInvoiceReportDTO
             {
-                BusinessName = posInfo?.RegisteredName ?? "",
-                OperatorName = posInfo?.OperatedBy ?? "",
-                AddressLine = posInfo?.Address ?? "",
-                VatRegTin = posInfo?.VatTinNumber ?? "",
-                Min = posInfo?.MinNumber ?? "",
-                SerialNumber = posInfo?.PosSerialNumber ?? "",
+                BusinessName = posInfo.RegisteredName ?? "N/A",
+                OperatorName = posInfo.OperatedBy ?? "N/A",
+                AddressLine = posInfo.Address ?? "N/A",
+                VatRegTin = posInfo.VatTinNumber ?? "N/A",
+                Min = posInfo.MinNumber ?? "N/A",
+                SerialNumber = posInfo.PosSerialNumber ?? "N/A",
 
                 ReportDate = DateTime.Now.ToString("MMMM dd, yyyy", pesoCulture),
                 ReportTime = DateTime.Now.ToString("hh:mm tt", pesoCulture),
-                StartDateTime = orders.First().CreatedAt.LocalDateTime.ToString("MM/dd/yy  hh:mm tt", pesoCulture),
-                EndDateTime = orders.Last().CreatedAt.LocalDateTime.ToString("MM/dd/yy  hh:mm tt", pesoCulture),
+                StartDateTime = firstOrder?.CreatedAt.LocalDateTime.ToString("MM/dd/yy  hh:mm tt", pesoCulture)
+                              ?? defaultDate.ToString("MM/dd/yy  hh:mm tt", pesoCulture),
+                EndDateTime = lastOrder?.CreatedAt.LocalDateTime.ToString("MM/dd/yy  hh:mm tt", pesoCulture)
+                             ?? defaultDate.ToString("MM/dd/yy  hh:mm tt", pesoCulture),
 
-                Cashier = ts?.Cashier.UserFName + " " + ts?.Cashier.UserLName,
-                BeginningOrNumber = orders.First().Id.ToString("D12"),
-                EndingOrNumber = orders.Last().Id.ToString("D12"),
+                Cashier = ts?.Cashier != null
+                        ? $"{ts.Cashier.UserFName} {ts.Cashier.UserLName}"
+                        : "N/A",
+                BeginningOrNumber = firstOrder?.Id.ToString("D12") ?? "N/A",
+                EndingOrNumber = lastOrder?.Id.ToString("D12") ?? "N/A",
 
                 OpeningFund = openingFundDec.ToString("C", pesoCulture),
                 VoidAmount = voidDec.ToString("C", pesoCulture),
                 Refund = refundDec.ToString("C", pesoCulture),
+                Withdrawal = withdrawnAmount.ToString("C", pesoCulture),
 
                 Payments = payments,
                 TransactionSummary = summary,
-
                 ShortOver = shortOverDec.ToString("C", pesoCulture)
             };
 
-            foreach (var order in orders)
-                order.IsRead = true;
+            // Mark orders as read if any exist
+            if (orders.Any())
+            {
+                foreach (var order in orders)
+                {
+                    order.IsRead = true;
+                }
+                await _dataContext.SaveChangesAsync();
+            }
+
+            return dto;
+        }
+
+        public async Task<ZInvoiceReportDTO> ZInvoiceReport()
+        {
+            var pesoCulture = new CultureInfo("en-PH");
+            var defaultDecimal = 0m;
+            var defaultDate = new DateTime(2000, 1, 1);
+            var today = DateTime.Today;
+
+
+            // Initialize empty collections to prevent null references
+            var allTimestamps = await _dataContext.Timestamp
+                .Include(t => t.Cashier)
+                .Include(t => t.ManagerLog)
+                .ToListAsync() ?? new List<Timestamp>();
+
+            var orders = await _dataContext.Order
+                .Include(o => o.Items)
+                .Include(o => o.AlternativePayments)
+                    .ThenInclude(ap => ap.SaleType)
+                .ToListAsync() ?? new List<Order>();
+
+            var posInfo = await _dataContext.PosTerminalInfo.FirstOrDefaultAsync() ?? new PosTerminalInfo
+            {
+                RegisteredName = "N/A",
+                OperatedBy = "N/A",
+                Address = "N/A",
+                VatTinNumber = "N/A",
+                MinNumber = "N/A",
+                PosSerialNumber = "N/A",
+                AccreditationNumber = "N/A",
+                DateIssued = DateTime.Now,
+                PtuNumber = "N/A",
+                ValidUntil = DateTime.Now
+            };
+
+            // Handle empty scenario for dates
+            var startDate = orders.Any() ? orders.Min(t => t.CreatedAt.LocalDateTime) : defaultDate;
+            var endDate = orders.Any() ? orders.Max(t => t.CreatedAt.LocalDateTime) : defaultDate;
+
+            // Calculate values with null protection
+            var withdrawnAmount = allTimestamps
+                .SelectMany(t => t.ManagerLog)
+                .Where(mw => mw?.Action == "Withdrawal")
+                .Sum(mw => mw?.WithdrawAmount ?? defaultDecimal);
+
+            var regularOrders = orders.Where(o => !o.IsCancelled && !o.IsReturned).ToList();
+            var voidOrders = orders.Where(o => o.IsCancelled).ToList();
+            var returnOrders = orders.Where(o => o.IsReturned).ToList();
+
+            // Accumulated Sales
+            decimal previousAccumulatedSales = regularOrders.Where(c => c.CreatedAt.Date < today).Sum(o => o?.TotalAmount ?? defaultDecimal);
+            decimal salesForTheDay = regularOrders.Where(c => c.CreatedAt.Date == today).Sum(o => o?.TotalAmount ?? defaultDecimal);
+            decimal presentAccumulatedSales = previousAccumulatedSales + salesForTheDay;
+
+            // Financial calculations with default values
+            decimal grossSales = regularOrders.Sum(o => o?.TotalAmount ?? defaultDecimal);
+            decimal totalVoid = voidOrders.Sum(o => o?.TotalAmount ?? defaultDecimal);
+            decimal totalReturns = returnOrders.Sum(o => o?.TotalAmount ?? defaultDecimal);
+            decimal totalDiscounts = regularOrders.Sum(o => o?.DiscountAmount ?? defaultDecimal);
+            decimal cashSales = regularOrders.Sum(o => o?.CashTendered ?? defaultDecimal);
+            decimal netAmount = grossSales - totalReturns - totalVoid - totalDiscounts;
+
+            // VAT calculations with defaults
+            decimal vatableSales = regularOrders.Sum(v => v?.VatSales ?? defaultDecimal);
+            decimal vatAmount = regularOrders.Sum(o => o?.VatAmount ?? defaultDecimal);
+            decimal vatExempt = regularOrders.Sum(o => o?.VatExempt ?? defaultDecimal);
+            decimal zeroRated = 0m;
+
+            decimal cashInDrawer = allTimestamps.Sum(s => s.CashOutDrawerAmount) ?? defaultDecimal;
+            decimal openingFund = allTimestamps.LastOrDefault()?.CashInDrawerAmount ?? defaultDecimal;
+
+            decimal expectedCash = openingFund + cashSales;
+            decimal actualCash = cashInDrawer + withdrawnAmount;
+            decimal shortOver = actualCash - expectedCash;
+
+            var knownDiscountTypes = Enum.GetNames(typeof(DiscountTypeEnum)).ToList();
+
+            decimal seniorDiscount = regularOrders
+                .Where(s => s.DiscountType == DiscountTypeEnum.Senior.ToString())
+                .Sum(s => s.DiscountAmount) ?? 0m;
+
+            decimal pwdDiscount = regularOrders
+                .Where(s => s.DiscountType == DiscountTypeEnum.Pwd.ToString())
+                .Sum(s => s.DiscountAmount) ?? 0m;
+
+            decimal otherDiscount = regularOrders
+                .Where(s => !knownDiscountTypes.Contains(s.DiscountType))
+                .Sum(s => s.DiscountAmount) ?? 0m;
+
+            // Safe payment processing
+            var payments = new Payments
+            {
+                Cash = cashSales,
+                OtherPayments = orders
+                .SelectMany(o => o.AlternativePayments != null ? o.AlternativePayments : new List<AlternativePayments>())
+                .GroupBy(ap => ap.SaleType?.Name ?? "Unknown")
+                .Select(g => new PaymentDetail
+                {
+                    Name = g.Key,
+                    Amount = g.Sum(x => x.Amount)
+                }).ToList()
+            };
+
+            // Build DTO with zero defaults
+            var dto = new ZInvoiceReportDTO
+            {
+                BusinessName = posInfo.RegisteredName ?? "N/A",
+                OperatorName = posInfo.OperatedBy ?? "N/A",
+                AddressLine = posInfo.Address ?? "N/A",
+                VatRegTin = posInfo.VatTinNumber ?? "N/A",
+                Min = posInfo.MinNumber ?? "N/A",
+                SerialNumber = posInfo.PosSerialNumber ?? "N/A",
+
+                ReportDate = DateTime.Now.ToString("MMMM dd, yyyy", pesoCulture),
+                ReportTime = DateTime.Now.ToString("hh:mm tt", pesoCulture),
+                StartDateTime = startDate.ToString("MM/dd/yy  hh:mm tt", pesoCulture),
+                EndDateTime = endDate.ToString("MM/dd/yy  hh:mm tt", pesoCulture),
+
+                // Order numbers
+                BeginningSI = GetOrderNumber(regularOrders.Min(o => o?.Id)),
+                EndingSI = GetOrderNumber(regularOrders.Max(o => o?.Id)),
+                BeginningVoid = GetOrderNumber(voidOrders.Min(o => o?.Id)),
+                EndingVoid = GetOrderNumber(voidOrders.Max(o => o?.Id)),
+                BeginningReturn = GetOrderNumber(returnOrders.Min(o => o?.Id)),
+                EndingReturn = GetOrderNumber(returnOrders.Max(o => o?.Id)),
+
+                // Always zero when empty
+                ResetCounter = posInfo.ResetCounterNo.ToString(),
+                ZCounter = posInfo.ZCounterNo.ToString(),
+
+                // Financial summaries
+                PresentAccumulatedSales = presentAccumulatedSales.ToString("C", pesoCulture),
+                PreviousAccumulatedSales = previousAccumulatedSales.ToString("C", pesoCulture),
+                SalesForTheDay = salesForTheDay.ToString("C", pesoCulture),
+
+                SalesBreakdown = new SalesBreakdown
+                {
+                    VatableSales = vatableSales.ToString("C", pesoCulture),
+                    VatAmount = vatAmount.ToString("C", pesoCulture),
+                    VatExemptSales = vatExempt.ToString("C", pesoCulture),
+                    ZeroRatedSales = zeroRated.ToString("C", pesoCulture),
+                    GrossAmount = grossSales.ToString("C", pesoCulture),
+                    LessDiscount = totalDiscounts.ToString("C", pesoCulture),
+                    LessReturn = totalReturns.ToString("C", pesoCulture),
+                    LessVoid = totalVoid.ToString("C", pesoCulture),
+                    LessVatAdjustment = defaultDecimal.ToString("C", pesoCulture),
+                    NetAmount = netAmount.ToString("C", pesoCulture)
+                },
+
+                TransactionSummary = new TransactionSummary
+                {
+                    CashInDrawer = cashSales.ToString("C", pesoCulture),
+                    OtherPayments = payments.OtherPayments
+                },
+
+                DiscountSummary = new DiscountSummary
+                {
+                    SeniorCitizen = seniorDiscount.ToString("C", pesoCulture),
+                    PWD = pwdDiscount.ToString("C", pesoCulture),
+                    Other = otherDiscount.ToString("C", pesoCulture)
+                },
+
+                SalesAdjustment = new SalesAdjustment
+                {
+                    Return = totalReturns.ToString("C", pesoCulture),
+                    Void = totalVoid.ToString("C", pesoCulture),
+                },
+
+                VatAdjustment = new VatAdjustment
+                {
+                    SCTrans = defaultDecimal.ToString("C", pesoCulture),
+                    PWDTrans = defaultDecimal.ToString("C", pesoCulture),
+                    RegDiscTrans = defaultDecimal.ToString("C", pesoCulture),
+                    ZeroRatedTrans = defaultDecimal.ToString("C", pesoCulture),
+                    VatOnReturn = defaultDecimal.ToString("C", pesoCulture),
+                    OtherAdjustments = defaultDecimal.ToString("C", pesoCulture)
+                },
+
+                OpeningFund = openingFund.ToString("C", pesoCulture),
+                Withdrawal = withdrawnAmount.ToString("C", pesoCulture),
+                PaymentsReceived = (cashSales + payments.OtherPayments.Sum(s => s.Amount)).ToString("C", pesoCulture),
+                ShortOver = shortOver.ToString("C", pesoCulture)
+            };
+
+            posInfo.ZCounterNo += 1;
             await _dataContext.SaveChangesAsync();
 
             return dto;
+        }
+
+        private string GetOrderNumber(long? orderId)
+        {
+            return orderId.HasValue ? orderId.Value.ToString("D12") : 0.ToString("D12");
         }
     }
 }

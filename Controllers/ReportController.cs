@@ -37,5 +37,11 @@ namespace EBISX_POS.API.Controllers
         {
             return Ok(await _report.XInvoiceReport());
         }
+
+        [HttpGet]
+        public async Task<IActionResult> ZInvoiceReport()
+        {
+            return Ok(await _report.ZInvoiceReport());
+        }
     }
 }

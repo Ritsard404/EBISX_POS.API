@@ -8,6 +8,7 @@ using EBISX_POS.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 
 namespace EBISX_POS.API.Services.Repositories
 {
@@ -299,27 +300,33 @@ namespace EBISX_POS.API.Services.Repositories
             currentOrder.OSCAIdsNum = addPwdScDiscount.OSCAIdsNum;
             currentOrder.EligiblePwdScNames = addPwdScDiscount.EligiblePwdScNames;
 
+            _logger.LogWarning("EntryIds: {EntryIds}", string.Join(", ", addPwdScDiscount.EntryId));
+
+            var cleanEntryIds = addPwdScDiscount.EntryId.Select(id => id.Trim()).Distinct().ToList();
             foreach (var orderEntity in orderEntities)
             {
-
-                // Update only the items that match the provided EntryId.
+                var updatedMealIds = new HashSet<long>();
                 foreach (var item in orderEntity.Items)
                 {
-                    if (item.EntryId != null && addPwdScDiscount.EntryId.Contains(item.EntryId))
+                    if (item.EntryId != null && cleanEntryIds.Contains(item.EntryId))
                     {
                         item.IsPwdDiscounted = !addPwdScDiscount.IsSeniorDisc;
                         item.IsSeniorDiscounted = addPwdScDiscount.IsSeniorDisc;
-                    }
 
-                    // Update related sub-meals.
-                    var subMeal = await _dataContext.Item
-                        .Where(i => i.Meal != null && i.Meal.Id == item.Id)
-                        .ToListAsync();
+                        if (!updatedMealIds.Contains(item.Id))
+                        {
+                            var subMeal = await _dataContext.Item
+                                .Where(i => i.Meal != null && i.Meal.Id == item.Id)
+                                .ToListAsync();
 
-                    foreach (var meal in subMeal)
-                    {
-                        meal.IsPwdDiscounted = !addPwdScDiscount.IsSeniorDisc;
-                        meal.IsSeniorDiscounted = addPwdScDiscount.IsSeniorDisc;
+                            foreach (var meal in subMeal)
+                            {
+                                meal.IsPwdDiscounted = !addPwdScDiscount.IsSeniorDisc;
+                                meal.IsSeniorDiscounted = addPwdScDiscount.IsSeniorDisc;
+                            }
+
+                            updatedMealIds.Add(item.Id);
+                        }
                     }
                 }
             }
@@ -375,6 +382,12 @@ namespace EBISX_POS.API.Services.Repositories
             // Cancel the order
             currentOrder.IsPending = false;
             currentOrder.IsCancelled = true;
+            currentOrder.ManagerLog ??= new List<ManagerLog>();
+            currentOrder.ManagerLog.Add(new ManagerLog
+            {
+                Manager = manager,
+                Action = "Order Cancelled",
+            });
 
             // Void all items in the order
             var orderItems = await _dataContext.Item
@@ -571,6 +584,7 @@ namespace EBISX_POS.API.Services.Repositories
             finishOrder.TotalTendered = finalizeOrder.TotalTendered;
             finishOrder.ChangeAmount = finalizeOrder.ChangeAmount;
             finishOrder.VatExempt = finalizeOrder.VatExempt;
+            finishOrder.VatSales = finalizeOrder.VatSales;
             finishOrder.VatAmount = finalizeOrder.VatAmount;
 
             // Add journal entries
@@ -981,6 +995,46 @@ namespace EBISX_POS.API.Services.Repositories
 
             return (order.EligiblePwdScNames?.Split(", ") ?? Array.Empty<string>()).ToList();
 
+        }
+
+        public async Task<(bool, string)> RefundOrder(string managerEmail, long orderId)
+        {
+            var manager = await _dataContext.User
+                .FirstOrDefaultAsync(u => u.UserEmail == managerEmail && u.IsActive);
+
+            // Validate credentials
+            if (manager == null)
+            {
+                return (false, "Invalid Credential.");
+            }
+
+            // Retrieve the current pending order for the cashier
+            var orderToRefund = await _dataContext.Order
+                .Include(o => o.Cashier)
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (orderToRefund == null || orderToRefund.IsReturned || orderToRefund.IsCancelled)
+            {
+                return (false, "No Order Exist");
+            }
+
+            orderToRefund.IsReturned = true;
+            orderToRefund.ManagerLog ??= new List<ManagerLog>();
+            orderToRefund.ManagerLog.Add(new ManagerLog
+            {
+                Manager = manager,
+                Action = "Order Returned",
+            });
+
+            await _dataContext.SaveChangesAsync();
+
+            await _journal.AddItemsJournal(orderToRefund.Id);
+            await _journal.AddTendersJournal(orderToRefund.Id);
+            await _journal.AddTotalsJournal(orderToRefund.Id);
+            await _journal.AddPwdScJournal(orderToRefund.Id);
+
+            return (true, "Order Refunded.");
         }
     }
 }
