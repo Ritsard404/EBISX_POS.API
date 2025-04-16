@@ -46,22 +46,35 @@ namespace EBISX_POS.API.Services.Repositories
             return (cashInDrawerText, currentCashDrawerText);
         }
 
-        public async Task<List<GetInvoicesDTO>> GetInvoicesByDate(DateTime dateTime)
+        public async Task<List<GetInvoicesDTO>> GetInvoicesByDateRange(DateTime fromDate, DateTime toDate)
         {
+            // normalize to midnight at the start of each day
+            var start = fromDate.Date;
+            var end = toDate.Date.AddDays(1);
+
             return await _dataContext.Order
                 .Include(o => o.Cashier)
-                .Where(d => d.CreatedAt.DateTime == dateTime && !d.IsCancelled && !d.IsPending && !d.IsReturned)
-                .Select(s => new GetInvoicesDTO()
+                .Where(o =>
+                    o.CreatedAt >= start &&
+                    o.CreatedAt < end &&
+                    !o.IsCancelled &&
+                    !o.IsPending &&
+                    !o.IsReturned)
+                .Select(s => new GetInvoicesDTO
                 {
                     InvoiceNum = s.Id,
-                    DateTime = s.CreatedAt.ToString("MM/dd/yyyy hh:mm tt"),
+                    InvoiceNumString = s.Id.ToString("D12"),
+                    Date = s.CreatedAt.ToString("MM/dd/yyyy"),
+                    Time = s.CreatedAt.ToString("hh:mm tt"),
                     CashierName = s.Cashier.UserFName + " " + s.Cashier.UserLName,
                     CashierEmail = s.Cashier.UserEmail,
                 })
+                .OrderBy(i => i.InvoiceNum)
                 .ToListAsync();
         }
 
-        public async Task<List<GetInvoiceDTO>> GetInvoiceById(long invId)
+
+        public async Task<GetInvoiceDTO> GetInvoiceById(long invId)
         {
             // 1) Load the order, its cashier, items and alternative payments
             var order = await _dataContext.Order
@@ -72,7 +85,7 @@ namespace EBISX_POS.API.Services.Repositories
                 .FirstOrDefaultAsync(o => o.Id == invId);
 
             if (order == null)
-                return new List<GetInvoiceDTO>();
+                return new GetInvoiceDTO();
 
             var orderItems = await GetOrderItems(order.Id);
 
@@ -90,7 +103,7 @@ namespace EBISX_POS.API.Services.Repositories
                 MinNumber = posInfo?.MinNumber ?? "",
 
                 // --- Invoice Header
-                InvoiceNum = order.Id.ToString(),
+                InvoiceNum = order.Id.ToString("D12"),
                 InvoiceDate = order.CreatedAt
                                           .ToString("MM/dd/yyyy HH:mm:ss"),
                 OrderType = order.OrderType,
@@ -153,7 +166,7 @@ namespace EBISX_POS.API.Services.Repositories
                 ValidUntil = posInfo?.ValidUntil.ToString("MM/dd/yyyy") ?? ""
             };
 
-            return new List<GetInvoiceDTO> { dto };
+            return dto;
         }
 
         private async Task<List<GetCurrentOrderItemsDTO>> GetOrderItems(long orderId)
@@ -335,7 +348,7 @@ namespace EBISX_POS.API.Services.Repositories
                                     .Sum(o => o?.TotalAmount ?? defaultDecimal);
 
             decimal validOrdersTotal = orders.Where(o => !o.IsCancelled && !o.IsReturned)
-                                           .Sum(o => o?.TotalAmount ?? defaultDecimal);
+                                           .Sum(o => o?.CashTendered - o?.ChangeAmount ?? defaultDecimal);
 
             decimal shortOverDec = openingFundDec + validOrdersTotal
                                  - ((ts?.CashOutDrawerAmount ?? defaultDecimal) - withdrawnAmount);
@@ -343,7 +356,7 @@ namespace EBISX_POS.API.Services.Repositories
             // Safe payment processing
             var payments = new Payments
             {
-                Cash = orders.Sum(o => o?.CashTendered ?? defaultDecimal),
+                Cash = orders.Sum(o => o?.CashTendered - o?.ChangeAmount ?? defaultDecimal),
                 OtherPayments = orders
                     .SelectMany(o => o.AlternativePayments ?? new List<AlternativePayments>())
                     .GroupBy(ap => ap.SaleType?.Name ?? "Unknown")

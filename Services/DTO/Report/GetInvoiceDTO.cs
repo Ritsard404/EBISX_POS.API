@@ -3,56 +3,55 @@
     public class GetInvoiceDTO
     {
         // Business Details
-        public required string RegisteredName { get; set; }
-        public required string Address { get; set; }
-        public required string VatTinNumber { get; set; }
-        public required string MinNumber { get; set; }
+        public string RegisteredName { get; set; } = string.Empty; // Default to empty string
+        public string Address { get; set; } = string.Empty; // Default to empty string
+        public string VatTinNumber { get; set; } = string.Empty; // Default to empty string
+        public string MinNumber { get; set; } = string.Empty; // Default to empty string
 
         // Invoice Details
-        public required string InvoiceNum { get; set; }
-        public required string InvoiceDate { get; set; }
-        public required string OrderType { get; set; }
-        public required string CashierName { get; set; }
+        public string InvoiceNum { get; set; } = string.Empty; // Default to empty string
+        public string InvoiceDate { get; set; } = string.Empty; // Default to empty string
+        public string OrderType { get; set; } = string.Empty; // Default to empty string
+        public string CashierName { get; set; } = string.Empty; // Default to empty string
 
         // Items
-        public required List<ItemDTO> Items { get; set; } = new List<ItemDTO>();
+        public List<ItemDTO> Items { get; set; } = new List<ItemDTO>(); // Default to empty list
 
         // Totals
-        public required string TotalAmount { get; set; }
-        public required string DiscountAmount { get; set; }
-        public required string DueAmount { get; set; }
-        public List<OtherPaymentDTO>? OtherPayments { get; set; } = new List<OtherPaymentDTO>();
-        public required string CashTenderAmount { get; set; }
-        public required string TotalTenderAmount { get; set; }
-        public required string ChangeAmount { get; set; }
-        public required string VatExemptSales { get; set; }
-        public required string VatSales { get; set; }
-        public required string VatAmount { get; set; }
-        
-        public List<string> ElligiblePeopleDiscounts { get; set; } = new List<string>();
+        public string TotalAmount { get; set; } = string.Empty; // Default to empty string
+        public string DiscountAmount { get; set; } = string.Empty; // Default to empty string
+        public string DueAmount { get; set; } = string.Empty; // Default to empty string
+        public List<OtherPaymentDTO>? OtherPayments { get; set; } = new List<OtherPaymentDTO>(); // Default to empty list
+        public string CashTenderAmount { get; set; } = string.Empty; // Default to empty string
+        public string TotalTenderAmount { get; set; } = string.Empty; // Default to empty string
+        public string ChangeAmount { get; set; } = string.Empty; // Default to empty string
+        public string VatExemptSales { get; set; } = string.Empty; // Default to empty string
+        public string VatSales { get; set; } = string.Empty; // Default to empty string
+        public string VatAmount { get; set; } = string.Empty; // Default to empty string
+
+        public List<string> ElligiblePeopleDiscounts { get; set; } = new List<string>(); // Default to empty list
 
         // POS Details
-        public required string PosSerialNumber { get; set; } // serial number of the POS machine.
-        public required string DateIssued { get; set; } 
-        public required string ValidUntil { get; set; } 
+        public string PosSerialNumber { get; set; } = string.Empty; // Default to empty string
+        public string DateIssued { get; set; } = string.Empty; // Default to empty string
+        public string ValidUntil { get; set; } = string.Empty; // Default to empty string
     }
 
     public class ItemDTO
     {
-        public required int Qty { get; set; }
-        public List<ItemInfoDTO> itemInfos { get; set; } = new List<ItemInfoDTO>();
-
+        public int Qty { get; set; } = 0; // Default to 0
+        public List<ItemInfoDTO> itemInfos { get; set; } = new List<ItemInfoDTO>(); // Default to empty list
     }
 
     public class ItemInfoDTO
     {
-        public required string Description { get; set; }
-        public required string Amount { get; set; }
+        public string Description { get; set; } = string.Empty; // Default to empty string
+        public string Amount { get; set; } = string.Empty; // Default to empty string
     }
 
     public class OtherPaymentDTO
     {
-        public required string SaleTypeName { get; set; }
-        public required string Amount { get; set; }
+        public string SaleTypeName { get; set; } = string.Empty; // Default to empty string
+        public string Amount { get; set; } = string.Empty; // Default to empty string
     }
 }

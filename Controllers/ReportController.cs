@@ -21,9 +21,9 @@ namespace EBISX_POS.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetInvoicesByDate(DateTime dateTime)
+        public async Task<IActionResult> GetInvoicesByDateRange(DateTime fromDate, DateTime toDate)
         {
-            return Ok(await _report.GetInvoicesByDate(dateTime));
+            return Ok(await _report.GetInvoicesByDateRange(fromDate, toDate));
         }
 
         [HttpGet]
