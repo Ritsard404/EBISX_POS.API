@@ -20,6 +20,7 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<(bool isSuccess, string message)> AddTendersJournal(long orderId);
         Task<(bool isSuccess, string message)> AddTotalsJournal(long orderId);
 
+        Task<(bool isSuccess, string message)> TruncateOrders();
 
         Task<List<AccountJournal>> AccountJournals();
     }

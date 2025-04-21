@@ -6,6 +6,7 @@ using EBISX_POS.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace EBISX_POS.API.Services.Repositories
 {
@@ -525,6 +526,115 @@ namespace EBISX_POS.API.Services.Repositories
             }
         }
 
+        public async Task<(bool isSuccess, string message)> TruncateOrders()
+        {
+            try
+            {
+                var posInfo = await _dataContext.PosTerminalInfo.FirstOrDefaultAsync() ?? new PosTerminalInfo
+                {
+                    RegisteredName = "N/A",
+                    OperatedBy = "N/A",
+                    Address = "N/A",
+                    VatTinNumber = "N/A",
+                    MinNumber = "N/A",
+                    PosSerialNumber = "N/A",
+                    AccreditationNumber = "N/A",
+                    DateIssued = DateTime.Now,
+                    PtuNumber = "N/A",
+                    ValidUntil = DateTime.Now
+                };
+
+                var resetId = posInfo.ResetCounterNo;
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var backupDir = "C:\\Backups"; // Make sure this path exists and is writable
+
+                if(Directory.Exists(backupDir) == false)
+                    Directory.CreateDirectory(backupDir);
+
+
+                // Step 1: Export to .sql files
+                await DumpTableToFile("Order", Path.Combine(backupDir, $"Order_Backup_{resetId}_{timestamp}.sql"));
+                await DumpTableToFile("AccountJournal", Path.Combine(backupDir, $"AccountJournal_Backup_{resetId}_{timestamp}.sql"));
+
+                // Step 2: Create backup tables in MySQL
+                var orderBackupTable = $"Order_Backup_{resetId}";
+                var journalBackupTable = $"AccountJournal_Backup_{resetId}";
+
+                var backupOrderSql = $@"
+            CREATE TABLE IF NOT EXISTS `{orderBackupTable}` LIKE `Order`;
+            INSERT INTO `{orderBackupTable}` SELECT * FROM `Order`;
+        ";
+
+                var backupJournalSql = $@"
+            CREATE TABLE IF NOT EXISTS `{journalBackupTable}` LIKE `AccountJournal`;
+            INSERT INTO `{journalBackupTable}` SELECT * FROM `AccountJournal`;
+        ";
+
+                await _dataContext.Database.ExecuteSqlRawAsync(backupOrderSql);
+                await _journal.Database.ExecuteSqlRawAsync(backupJournalSql);
+
+                // Step 3: Truncate the original tables
+                var truncateOrderSql = @"
+            SET FOREIGN_KEY_CHECKS = 0;
+            TRUNCATE TABLE `Order`;
+            SET FOREIGN_KEY_CHECKS = 1;
+        ";
+
+                var truncateJournalSql = @"
+            SET FOREIGN_KEY_CHECKS = 0;
+            TRUNCATE TABLE `AccountJournal`;
+            SET FOREIGN_KEY_CHECKS = 1;
+        ";
+
+                await _dataContext.Database.ExecuteSqlRawAsync(truncateOrderSql);
+                await _journal.Database.ExecuteSqlRawAsync(truncateJournalSql);
+
+                // Step 4: Increment the ResetCounterNo
+                posInfo.ResetCounterNo += 1;
+                await _dataContext.SaveChangesAsync();
+
+                return (true, "Order and journal tables backed up, exported, and truncated successfully.");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Failed to truncate orders: {ex.Message}");
+            }
+        }
+
+        private async Task DumpTableToFile(string tableName, string filePath)
+        {
+            // Retrieve the connection string values (consider using IConfiguration for this)
+            var connectionString = "Data Source=localhost;Initial Catalog=ebisx_pos;User ID=root;Password=200303"; // Example, replace with your method to get values
+            var dbSettings = new Dictionary<string, string>();
+            foreach (var item in connectionString.Split(';'))
+            {
+                var keyValue = item.Split('=');
+                if (keyValue.Length == 2)
+                {
+                    dbSettings[keyValue[0].Trim()] = keyValue[1].Trim();
+                }
+            }
+
+            var user = dbSettings["User ID"];
+            var password = dbSettings["Password"];
+            var database = dbSettings["Initial Catalog"];
+
+            // Escape special characters for password and file path
+            var escapedPassword = password.Contains(" ") ? $"\"{password}\"" : password;
+            var escapedFilePath = filePath.Contains(" ") ? $"\"{filePath}\"" : filePath;
+
+            var processStartInfo = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/C mysqldump --user={user} --password={escapedPassword} --host=localhost --databases {database} {tableName} > {escapedFilePath}",
+                RedirectStandardOutput = false,
+                UseShellExecute = true,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(processStartInfo);
+            await process.WaitForExitAsync();
+        }
         public async Task<(bool isSuccess, string message)> UnpostPwdScAccountJournal(long orderId, string oscaNum)
         {
             var pwdOrSc = await _journal.AccountJournal

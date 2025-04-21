@@ -26,6 +26,17 @@ namespace EBISX_POS.API.Controllers
             return BadRequest(message);
         }
 
+        [HttpPost]
+        public async Task<IActionResult> TruncateOrders()
+        {
+            var (success, message) = await _journal.TruncateOrders();
+            if (success)
+            {
+                return Ok(message);
+            }
+            return BadRequest(message);
+        }
+
         //[HttpPost]
         //public async Task<IActionResult> AddItemsJournal(long orderId)
         //{

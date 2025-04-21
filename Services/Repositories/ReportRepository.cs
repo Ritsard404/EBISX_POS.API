@@ -427,18 +427,17 @@ namespace EBISX_POS.API.Services.Repositories
             var defaultDate = new DateTime(2000, 1, 1);
             var today = DateTime.Today;
 
+            var orders = await _dataContext.Order
+                .Include(o => o.Items)
+                .Include(o => o.AlternativePayments)
+                    .ThenInclude(ap => ap.SaleType)
+                .ToListAsync() ?? new List<Order>();
 
             // Initialize empty collections to prevent null references
             var allTimestamps = await _dataContext.Timestamp
                 .Include(t => t.Cashier)
                 .Include(t => t.ManagerLog)
                 .ToListAsync() ?? new List<Timestamp>();
-
-            var orders = await _dataContext.Order
-                .Include(o => o.Items)
-                .Include(o => o.AlternativePayments)
-                    .ThenInclude(ap => ap.SaleType)
-                .ToListAsync() ?? new List<Order>();
 
             var posInfo = await _dataContext.PosTerminalInfo.FirstOrDefaultAsync() ?? new PosTerminalInfo
             {
@@ -455,11 +454,12 @@ namespace EBISX_POS.API.Services.Repositories
             };
 
             // Handle empty scenario for dates
-            var startDate = orders.Any() ? orders.Min(t => t.CreatedAt.LocalDateTime) : defaultDate;
-            var endDate = orders.Any() ? orders.Max(t => t.CreatedAt.LocalDateTime) : defaultDate;
+            var startDate = orders.Any() ? orders.Min(t => t.CreatedAt.LocalDateTime) : DateTime.Now;
+            var endDate = orders.Any() ? orders.Max(t => t.CreatedAt.LocalDateTime) : DateTime.Now;
 
-            // Calculate values with null protection
+            // Withdrawal Amount
             var withdrawnAmount = allTimestamps
+                .Where(c => c.TsOut!.Value.LocalDateTime >= startDate)
                 .SelectMany(t => t.ManagerLog)
                 .Where(mw => mw?.Action == "Withdrawal")
                 .Sum(mw => mw?.WithdrawAmount ?? defaultDecimal);
@@ -487,8 +487,15 @@ namespace EBISX_POS.API.Services.Repositories
             decimal vatExempt = regularOrders.Sum(o => o?.VatExempt ?? defaultDecimal);
             decimal zeroRated = 0m;
 
-            decimal cashInDrawer = allTimestamps.Sum(s => s.CashOutDrawerAmount) ?? defaultDecimal;
-            decimal openingFund = allTimestamps.LastOrDefault()?.CashInDrawerAmount ?? defaultDecimal;
+            // Cash in Drawer
+            decimal cashInDrawer = allTimestamps
+                .Where(c => c.TsOut!.Value.LocalDateTime >= startDate)
+                .Sum(s => s.CashOutDrawerAmount) ?? defaultDecimal;
+
+            // Opening Fund
+            decimal openingFund = allTimestamps
+                .Where(c => c.TsOut!.Value.LocalDateTime >= startDate)
+                .LastOrDefault()?.CashInDrawerAmount ?? defaultDecimal;
 
             decimal expectedCash = openingFund + cashSales;
             decimal actualCash = cashInDrawer + withdrawnAmount;

@@ -23,5 +23,6 @@ namespace EBISX_POS.API.Services.Interfaces
 
         Task<List<GetCurrentOrderItemsDTO>> GetCurrentOrderItems(string cashierEmail);
         Task<List<string>> GetElligiblePWDSCDiscount(string cashierEmail);
+
     }
 }
