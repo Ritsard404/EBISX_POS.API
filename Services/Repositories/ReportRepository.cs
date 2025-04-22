@@ -154,7 +154,7 @@ namespace EBISX_POS.API.Services.Repositories
                     .ToList(),
 
                 // PWD/Senior/etc.
-                ElligiblePeopleDiscounts = order.EligiblePwdScNames?
+                ElligiblePeopleDiscounts = order.EligibleDiscNames?
                     .Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(s => s.Trim())
                     .ToList()
@@ -428,6 +428,7 @@ namespace EBISX_POS.API.Services.Repositories
             var today = DateTime.Today;
 
             var orders = await _dataContext.Order
+                .Where(o => !o.IsTrainMode)
                 .Include(o => o.Items)
                 .Include(o => o.AlternativePayments)
                     .ThenInclude(ap => ap.SaleType)

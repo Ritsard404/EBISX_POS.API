@@ -89,6 +89,17 @@ namespace EBISX_POS.API.Controllers
         }
 
         [HttpPut]
+        public async Task<IActionResult> AddOtherDiscount(AddOtherDiscountDTO addOtherDiscount)
+        {
+            var (success, message) = await _order.AddOtherDiscount(addOtherDiscount);
+            if (success)
+            {
+                return Ok(message);
+            }
+            return BadRequest(message);
+        }
+
+        [HttpPut]
         public async Task<IActionResult> PromoDiscount(string cashierEmail, string managerEmail, string promoCode)
         {
 

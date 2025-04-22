@@ -289,12 +289,14 @@ namespace EBISX_POS.API.Migrations
                     IsCancelled = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     IsReturned = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     IsRead = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    IsTrainMode = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     IsPending = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     DiscountType = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     DiscountAmount = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
+                    DiscountPercent = table.Column<int>(type: "int", nullable: true),
                     EligiblePwdScCount = table.Column<int>(type: "int", nullable: true),
-                    EligiblePwdScNames = table.Column<string>(type: "longtext", nullable: true)
+                    EligibleDiscNames = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     OSCAIdsNum = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),

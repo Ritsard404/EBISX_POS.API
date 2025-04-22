@@ -35,6 +35,7 @@
         public decimal ItemPrice { get; set; }
         public int Quantity { get; set; }
         public bool IsFirstItem { get; set; } = false;
+        public bool IsOtherDisc { get; set; } = false;
 
         // ✅ Computed properties
         public decimal ItemSubTotal => AddOnId == null && MenuId == null && DrinkId == null
@@ -70,13 +71,19 @@
             }
         }
 
-
         public bool IsUpgradeMeal => ItemPrice > 0;
 
-        public string ItemPriceString => IsFirstItem ? "₱" + ItemSubTotal.ToString("G29")
-            : MenuId == null && DrinkId == null && AddOnId == null ? "- ₱" + ItemSubTotal.ToString("G29")
-            : IsUpgradeMeal ? "+ ₱" + ItemSubTotal.ToString("G29")
-            : "";
+        public string ItemPriceString =>
+        IsOtherDisc
+            ? $"{ItemPrice:0}%"                                                   // 1) explicit “other” → percent
+            : (MenuId == null && DrinkId == null && AddOnId == null)
+                ? $"- ₱{ItemSubTotal:G29}"                                         // 2) pure‑discount & not other → negative ₱
+                : IsFirstItem
+                    ? $"₱{ItemSubTotal:G29}"                                      // 3) first item → positive ₱
+                    : IsUpgradeMeal
+                        ? $"+ ₱{ItemSubTotal:G29}"                                // 4) upgrade → +₱
+                        : $"- ₱{ItemSubTotal:G29}";                               // 5) catch‑all → -₱
+
 
 
         // ✅ Opacity property for UI handling (optional)

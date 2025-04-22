@@ -221,16 +221,16 @@ namespace EBISX_POS.API.Services.Repositories
             }
 
             // 2) Guard: need both names and OSCAs
-            if (string.IsNullOrWhiteSpace(order.EligiblePwdScNames) ||
+            if (string.IsNullOrWhiteSpace(order.EligibleDiscNames) ||
                 string.IsNullOrWhiteSpace(order.OSCAIdsNum))
             {
                 _logger.LogWarning("No PWD/SC data on Order {OrderId}. Names: '{Names}', OSCAs: '{Oscas}'",
-                    orderId, order.EligiblePwdScNames, order.OSCAIdsNum);
+                    orderId, order.EligibleDiscNames, order.OSCAIdsNum);
                 return (false, "No PWD/SC information to journal.");
             }
 
             // 3) Split into lists
-            var names = order.EligiblePwdScNames
+            var names = order.EligibleDiscNames
                 .Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(n => n.Trim())
                 .ToList();

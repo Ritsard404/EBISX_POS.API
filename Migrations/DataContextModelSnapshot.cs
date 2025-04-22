@@ -332,17 +332,20 @@ namespace EBISX_POS.API.Migrations
                     b.Property<decimal?>("DiscountAmount")
                         .HasColumnType("decimal(65,30)");
 
+                    b.Property<int?>("DiscountPercent")
+                        .HasColumnType("int");
+
                     b.Property<string>("DiscountType")
                         .HasColumnType("longtext");
 
                     b.Property<decimal?>("DueAmount")
                         .HasColumnType("decimal(65,30)");
 
+                    b.Property<string>("EligibleDiscNames")
+                        .HasColumnType("longtext");
+
                     b.Property<int?>("EligiblePwdScCount")
                         .HasColumnType("int");
-
-                    b.Property<string>("EligiblePwdScNames")
-                        .HasColumnType("longtext");
 
                     b.Property<bool>("IsCancelled")
                         .HasColumnType("tinyint(1)");
@@ -354,6 +357,9 @@ namespace EBISX_POS.API.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("IsReturned")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsTrainMode")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("OSCAIdsNum")

@@ -298,9 +298,7 @@ namespace EBISX_POS.API.Services.Repositories
             currentOrder.DiscountAmount = totalDiscountedSubtotal;
             currentOrder.EligiblePwdScCount = addPwdScDiscount.PwdScCount;
             currentOrder.OSCAIdsNum = addPwdScDiscount.OSCAIdsNum;
-            currentOrder.EligiblePwdScNames = addPwdScDiscount.EligiblePwdScNames;
-
-            _logger.LogWarning("EntryIds: {EntryIds}", string.Join(", ", addPwdScDiscount.EntryId));
+            currentOrder.EligibleDiscNames = addPwdScDiscount.EligiblePwdScNames;
 
             var cleanEntryIds = addPwdScDiscount.EntryId.Select(id => id.Trim()).Distinct().ToList();
             foreach (var orderEntity in orderEntities)
@@ -345,6 +343,48 @@ namespace EBISX_POS.API.Services.Repositories
             });
 
             // Save changes to the database.
+            await _dataContext.SaveChangesAsync();
+
+            return (true, "Discount applied successfully.");
+        }
+
+        public async Task<(bool, string)> AddOtherDiscount(AddOtherDiscountDTO addOtherDiscount)
+        {
+            if (addOtherDiscount == null)
+            {
+                return (false, "Invalid discount data.");
+            }
+
+            var manager = await _dataContext.User
+                .FirstOrDefaultAsync(u => u.UserEmail == addOtherDiscount.ManagerEmail && u.IsActive);
+            var cashier = await _dataContext.User
+               .FirstOrDefaultAsync(u => u.UserEmail == addOtherDiscount.CashierEmail && u.IsActive);
+
+            if (cashier == null)
+            {
+                return (false, "Invalid Cashier Credential. Cashier:" + addOtherDiscount.CashierEmail);
+            }
+            if (manager == null)
+            {
+                return (false, "Invalid Manager Credential.");
+            }
+
+            var currentOrder = await _dataContext.Order
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.IsPending &&
+                                          o.Cashier != null &&
+                                          o.Cashier.UserEmail == addOtherDiscount.CashierEmail &&
+                                          o.Cashier.IsActive);
+
+            if (currentOrder == null)
+                return (false, "No pending order found for the specified cashier.");
+            if (!string.IsNullOrEmpty(currentOrder.DiscountType))
+                return (false, "A discount has already been applied to this order.");
+
+            currentOrder.DiscountType = "Other";
+            currentOrder.EligibleDiscNames = addOtherDiscount.DiscountName;
+            currentOrder.DiscountPercent = addOtherDiscount.DiscPercent;
+
             await _dataContext.SaveChangesAsync();
 
             return (true, "Discount applied successfully.");
@@ -636,6 +676,8 @@ namespace EBISX_POS.API.Services.Repositories
                 return new List<GetCurrentOrderItemsDTO>();
             }
 
+            var knownDiscountTypes = Enum.GetNames(typeof(DiscountTypeEnum)).ToList();
+
             //Fetch all non - voided items from pending orders for the cashier,
             //including related entities needed for the DTO.
 
@@ -735,6 +777,33 @@ namespace EBISX_POS.API.Services.Repositories
                             o.Coupon.Any())
                 .ToListAsync();
 
+
+            var orderWithOtherDiscount = await _dataContext.Order
+                .Where(o => o.IsPending &&
+                            o.Cashier != null &&
+                            o.Cashier.UserEmail == cashierEmail &&
+                            o.Cashier.IsActive &&
+                            !string.IsNullOrEmpty(o.DiscountType) &&
+                            !knownDiscountTypes.Contains(o.DiscountType))
+                .Select(o=> new GetCurrentOrderItemsDTO
+                {
+                    EntryId = "Other Discount",
+                    HasDiscount = true,
+
+                    SubOrders = new List<CurrentOrderItemsSubOrder>
+                    {
+                        new CurrentOrderItemsSubOrder
+                        {
+                            Name        = "Other Discount",
+                            ItemPrice   = o.DiscountPercent ?? 0m,
+                            Quantity    = 1,
+                            IsOtherDisc = true,
+                            IsFirstItem = true
+                        }
+                    }
+                })
+                .FirstOrDefaultAsync();
+
             var couponItems = ordersWithCoupons
                 .SelectMany(o => o.Coupon)
                 .Where(c => c != null)
@@ -772,10 +841,10 @@ namespace EBISX_POS.API.Services.Repositories
                 })
                 .ToList();
 
-
-
             // ✅ Merge regular orders with coupon orders.
             groupedItems.AddRange(couponItems);
+            if(orderWithOtherDiscount != null)
+                groupedItems.Add(orderWithOtherDiscount);
 
             return groupedItems;
         }
@@ -924,7 +993,7 @@ namespace EBISX_POS.API.Services.Repositories
 
                 // Limit the list entries to the eligible count (remove extra items from the beginning)
                 int eligibleCount = order.EligiblePwdScCount ?? 0;
-                var voidName = (order.EligiblePwdScNames?.Split(", ") ?? Array.Empty<string>()).ToList();
+                var voidName = (order.EligibleDiscNames?.Split(", ") ?? Array.Empty<string>()).ToList();
                 var voidOSca = (order.OSCAIdsNum?.Split(", ") ?? Array.Empty<string>()).ToList();
 
                 if (voidName.Count > eligibleCount)
@@ -940,7 +1009,7 @@ namespace EBISX_POS.API.Services.Repositories
                 await _journal.UnpostPwdScAccountJournal(order.Id, removedOsca);
 
 
-                order.EligiblePwdScNames = string.Join(", ", voidName);
+                order.EligibleDiscNames = string.Join(", ", voidName);
                 order.OSCAIdsNum = string.Join(", ", voidOSca);
 
 
@@ -993,7 +1062,7 @@ namespace EBISX_POS.API.Services.Repositories
                 return new List<string>();
             }
 
-            return (order.EligiblePwdScNames?.Split(", ") ?? Array.Empty<string>()).ToList();
+            return (order.EligibleDiscNames?.Split(", ") ?? Array.Empty<string>()).ToList();
 
         }
 
@@ -1036,37 +1105,6 @@ namespace EBISX_POS.API.Services.Repositories
 
             return (true, "Order Refunded.");
         }
+
     }
 }
-
-
-//order.Items
-//               .Select(i =>
-//               {
-//                   // Build a SubOrder instance so we can reuse its computed properties
-//                   var sub = new CurrentOrderItemsSubOrder
-//                   {
-//                       MenuId = i.Menu?.Id,
-//                       DrinkId = i.Drink?.Id,
-//                       AddOnId = i.AddOn?.Id,
-//                       Name = i.Menu?.MenuName
-//                                     ?? i.Drink?.MenuName
-//                                     ?? i.AddOn?.MenuName
-//                                     ?? "Unknown",
-//                       Size = i.Menu?.Size
-//                                     ?? i.Drink?.Size
-//                                     ?? i.AddOn?.Size,
-//                       ItemPrice = i.ItemPrice ?? 0m,
-//                       Quantity = i.ItemQTY ?? 1,
-//                       IsFirstItem = i.Meal == null
-//                   };
-
-//                   // Now project into your Invoice DTO
-//                   return new ItemDTO
-//                   {
-//                       Qty = sub.Quantity,
-//                       Description = sub.DisplayName,      // uses your DisplayName getter
-//                       Amount = sub.ItemPriceString   // uses your ItemPriceString getter
-//                   };
-//               })
-//               .ToList(),

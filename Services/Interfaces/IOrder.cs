@@ -8,6 +8,7 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<(bool, string)> AddOrderItem(AddOrderDTO addOrder);
         Task<(bool, string)> AddCurrentOrderVoid(AddCurrentOrderVoidDTO voidOrder);
         Task<(bool, string)> AddPwdScDiscount(AddPwdScDiscountDTO addPwdScDiscount);
+        Task<(bool, string)> AddOtherDiscount(AddOtherDiscountDTO addOtherDiscount);
 
 
         Task<(bool, string)> VoidOrderItem(VoidOrderItemDTO voidOrder);

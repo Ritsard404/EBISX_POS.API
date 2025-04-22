@@ -18,15 +18,18 @@ namespace EBISX_POS.API.Models
         public decimal? VatExempt { get; set; }
         public decimal? VatAmount { get; set; }
         public required DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
+
         public bool IsCancelled { get; set; } = false;
         public bool IsReturned { get; set; } = false;
         public bool IsRead { get; set; } = false;
+        public bool IsTrainMode { get; set; } = false;
         public bool IsPending { get; set; } = true;
 
         public string? DiscountType { get; set; }
         public decimal? DiscountAmount { get; set; }
+        public int? DiscountPercent { get; set; }
         public int? EligiblePwdScCount { get; set; }
-        public string? EligiblePwdScNames { get; set; }
+        public string? EligibleDiscNames { get; set; }
         public string? OSCAIdsNum { get; set; }
         public ICollection<CouponPromo> Coupon { get; set; } = new List<CouponPromo>();
         public CouponPromo? Promo { get; set; }
