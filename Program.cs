@@ -1,4 +1,5 @@
 ﻿using EBISX_POS.API.Data;
+using EBISX_POS.API.Extensions;
 using EBISX_POS.API.Services.Interfaces;
 using EBISX_POS.API.Services.Repositories;
 using EBISX_POS.API.Settings;
@@ -57,12 +58,12 @@ builder.Services.AddOptions();
 
 var app = builder.Build();
 
-// Seed the database
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    SeedData.InitializeAsync(services);
-}
+//// Seed the database
+//using (var scope = app.Services.CreateScope())
+//{
+//    var services = scope.ServiceProvider;
+//    SeedData.InitializeAsync(services);
+//}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -77,4 +78,5 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.CreteDbIfNotExists();
 app.Run();
