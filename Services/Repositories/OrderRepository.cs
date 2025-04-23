@@ -798,7 +798,7 @@ namespace EBISX_POS.API.Services.Repositories
                             ItemPrice   = o.DiscountPercent ?? 0m,
                             Quantity    = 1,
                             IsOtherDisc = true,
-                            IsFirstItem = true
+                            IsFirstItem = true,
                         }
                     }
                 })

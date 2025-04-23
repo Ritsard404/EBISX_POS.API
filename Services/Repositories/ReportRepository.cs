@@ -479,7 +479,7 @@ namespace EBISX_POS.API.Services.Repositories
             decimal totalVoid = voidOrders.Sum(o => o?.TotalAmount ?? defaultDecimal);
             decimal totalReturns = returnOrders.Sum(o => o?.TotalAmount ?? defaultDecimal);
             decimal totalDiscounts = regularOrders.Sum(o => o?.DiscountAmount ?? defaultDecimal);
-            decimal cashSales = regularOrders.Sum(o => o?.CashTendered ?? defaultDecimal);
+            decimal cashSales = regularOrders.Sum(o => o?.CashTendered - o?.ChangeAmount ?? defaultDecimal);
             decimal netAmount = grossSales - totalReturns - totalVoid - totalDiscounts;
 
             // VAT calculations with defaults
