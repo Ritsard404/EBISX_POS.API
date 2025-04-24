@@ -43,5 +43,11 @@ namespace EBISX_POS.API.Controllers
         {
             return Ok(await _report.ZInvoiceReport());
         }
+
+        [HttpGet]
+        public async Task<IActionResult> ManagerActionLog()
+        {
+            return Ok(await _report.ManagerActionLog());
+        }
     }
 }

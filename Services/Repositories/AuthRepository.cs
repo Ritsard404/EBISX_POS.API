@@ -68,7 +68,7 @@ namespace EBISX_POS.API.Services.Repositories
                 Manager = manager,
                 WithdrawAmount = cash,
                 Timestamp = timestamp,
-                Action = "Withdrawal"
+                Action = "Cash Withdrawal"
             });
 
             await _dataContext.SaveChangesAsync();

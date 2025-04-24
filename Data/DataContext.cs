@@ -21,7 +21,7 @@ namespace EBISX_POS.API.Data
         public DbSet<SaleType> SaleType { get; set; }
         public DbSet<AlternativePayments> AlternativePayments { get; set; }
         public DbSet<PosTerminalInfo> PosTerminalInfo { get; set; }
-        public DbSet<UserLog> ManagerLog { get; set; }
+        public DbSet<UserLog> UserLog { get; set; }
 
         // ✅ Auto-calculate subtotal before saving
         //public override int SaveChanges()

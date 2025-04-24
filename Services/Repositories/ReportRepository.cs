@@ -337,7 +337,7 @@ namespace EBISX_POS.API.Services.Repositories
 
             // Calculate financials with null protection
             decimal openingFundDec = ts?.CashInDrawerAmount ?? defaultDecimal;
-            decimal withdrawnAmount = await _dataContext.ManagerLog
+            decimal withdrawnAmount = await _dataContext.UserLog
                 .Where(mw => mw.Timestamp == ts)
                 .SumAsync(mw => mw.WithdrawAmount);
 
@@ -626,93 +626,25 @@ namespace EBISX_POS.API.Services.Repositories
 
             var logs = new List<ManagerActionLogDTO>();
 
-            var cancelledOrders = await _dataContext.Order
-                .Where(o => o.IsCancelled)
-                .ToListAsync();
-
-            var returnedOrders = await _dataContext.Order
-                .Where(o => o.IsReturned)
-                .ToListAsync();
-
-            var voidItems = await _dataContext.Item
-                .Where(o => o.IsVoid)
-                .ToListAsync();
-
-            var discountedItems = await _dataContext.Item
-                .Where(o => o.IsSeniorDiscounted || o.IsPwdDiscounted)
-                .ToListAsync();
-
-            var managerLogs = await _dataContext.ManagerLog
+            var managerLogs = await _dataContext.UserLog
                 .Include(m => m.Timestamp)
+                .Include(m => m.Cashier)
                 .Include(m => m.Manager)
+                .Where(c => c.Manager != null)
+                .Select(m => new ManagerActionLogDTO
+                {
+                    Name = m.Manager.UserFName + " " + m.Manager.UserLName,
+                    CashierName = m.Cashier.UserFName + " " + m.Cashier.UserLName,
+                    Action = m.Action,
+                    ManagerEmail = m.Manager.UserEmail,
+                    CashierEmail = m.Cashier.UserEmail,
+                    Amount = string.Format(CultureInfo.InvariantCulture, "₱{0:N2}", m.WithdrawAmount),
+                    ActionDate = m.CreatedAt.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
+                    SortActionDate = m.CreatedAt.ToLocalTime()
+                })
                 .ToListAsync();
 
-            //var logIns = await _dataContext.Timestamp
-            //    .Include(m => m.ManagerIn)
-            //    .Include(c => c.Cashier)
-            //    .Where(i => i.TsIn != null && i.TsOut == null)
-            //    .Select(t => new ManagerActionLogDTO()
-            //    {
-            //        Name = t.ManagerIn.UserFName + " " + t.ManagerIn.UserLName,
-            //        Action = ManagerActionType.Login,
-            //        ManagerEmail = t.ManagerIn.UserEmail,
-            //        CashierEmail = t.Cashier.UserEmail,
-            //        CashierName = t.Cashier.UserFName + " " + t.Cashier.UserLName,
-            //        ActionDate = t.TsOut.Value.ToString("MM/dd/yyyy hh:mm tt"),
-
-            //    })
-            //    .ToListAsync();
-
-            //var logOuts = await _dataContext.Timestamp
-            //    .Include(m => m.ManagerOut)
-            //    .Include(c => c.Cashier)
-            //    .Where(i => i.TsOut != null)
-            //    .Select(t => new ManagerActionLogDTO()
-            //    {
-            //        Name = t.ManagerOut.UserFName + " " + t.ManagerOut.UserLName,
-            //        Action = ManagerActionType.Logout,
-            //        ManagerEmail = t.ManagerOut.UserEmail,
-            //        CashierEmail = t.Cashier.UserEmail,
-            //        CashierName = t.Cashier.UserFName + " " + t.Cashier.UserLName,
-            //        ActionDate = t.TsOut.Value.ToString("MM/dd/yyyy hh:mm tt"),
-
-            //    })
-            //    .ToListAsync();
-
-            //var cashIns = await _dataContext.Timestamp
-            //    .Include(m => m.ManagerIn)
-            //    .Include(c => c.Cashier)
-            //    .Where(i => i.CashInDrawerAmount != null && i.CashOutDrawerAmount == null)
-            //    .Select(t => new ManagerActionLogDTO()
-            //    {
-            //        Name = t.ManagerOut.UserFName + " " + t.ManagerOut.UserLName,
-            //        Action = ManagerActionType.SetCashInDrawer,
-            //        ManagerEmail = t.ManagerOut.UserEmail,
-            //        CashierEmail = t.Cashier.UserEmail,
-            //        CashierName = t.Cashier.UserFName + " " + t.Cashier.UserLName,
-            //        Amount = t.CashInDrawerAmount.Value.ToString("C"),
-            //        ActionDate = t.TsIn.Value.ToString("MM/dd/yyyy hh:mm tt"),
-
-            //    })
-            //    .ToListAsync();
-
-            //var cashOuts = await _dataContext.Timestamp
-            //    .Include(m => m.ManagerOut)
-            //    .Include(c => c.Cashier)
-            //    .Where(i => i.CashOutDrawerAmount != null)
-            //    .Select(t => new ManagerActionLogDTO()
-            //    {
-            //        Name = t.ManagerOut.UserFName + " " + t.ManagerOut.UserLName,
-            //        Action = ManagerActionType.SetCashOutDrawer,
-            //        ManagerEmail = t.ManagerOut.UserEmail,
-            //        CashierEmail = t.Cashier.UserEmail,
-            //        CashierName = t.Cashier.UserFName + " " + t.Cashier.UserLName,
-            //        Amount = t.CashOutDrawerAmount.Value.ToString("C"),
-            //        ActionDate = t.TsOut.Value.ToString("MM/dd/yyyy hh:mm tt"),
-
-            //    })
-            //    .ToListAsync();
-
+            logs.AddRange(managerLogs);
 
             var timestamps = await _dataContext.Timestamp
                 .AsNoTracking()
@@ -730,11 +662,12 @@ namespace EBISX_POS.API.Services.Repositories
                     logs.Add(new ManagerActionLogDTO
                     {
                         Name = FullName(t.ManagerIn),
-                        Action = ManagerActionType.Login,
+                        Action = ManagerActionType.Login.ToString(),
                         ManagerEmail = t.ManagerIn.UserEmail,
                         CashierName = FullName(t.Cashier),
                         CashierEmail = t.Cashier.UserEmail,
-                        ActionDate = t.TsIn.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
+                        ActionDate = t.TsIn.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
+                        SortActionDate = t.TsIn.Value.LocalDateTime
                     });
                 }
 
@@ -745,11 +678,12 @@ namespace EBISX_POS.API.Services.Repositories
                     logs.Add(new ManagerActionLogDTO
                     {
                         Name = FullName(mgr),
-                        Action = ManagerActionType.Logout,
+                        Action = ManagerActionType.Logout.ToString(),
                         ManagerEmail = mgr.UserEmail,
                         CashierName = FullName(t.Cashier),
                         CashierEmail = t.Cashier.UserEmail,
-                        ActionDate = t.TsOut.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
+                        ActionDate = t.TsOut.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
+                        SortActionDate = t.TsOut.Value.LocalDateTime
                     });
                 }
 
@@ -759,12 +693,13 @@ namespace EBISX_POS.API.Services.Repositories
                     logs.Add(new ManagerActionLogDTO
                     {
                         Name = FullName(t.ManagerIn),
-                        Action = ManagerActionType.SetCashInDrawer,
+                        Action = ManagerActionType.SetCashInDrawer.ToString(),
                         ManagerEmail = t.ManagerIn.UserEmail,
                         CashierName = FullName(t.Cashier),
                         CashierEmail = t.Cashier.UserEmail,
-                        Amount = t.CashInDrawerAmount.Value.ToString("C"),
-                        ActionDate = t.TsIn.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
+                        Amount = string.Format(CultureInfo.InvariantCulture, "₱{0:N2}", t.CashInDrawerAmount.Value),
+                        ActionDate = t.TsIn.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
+                        SortActionDate = t.TsIn.Value.LocalDateTime
                     });
                 }
 
@@ -775,17 +710,20 @@ namespace EBISX_POS.API.Services.Repositories
                     logs.Add(new ManagerActionLogDTO
                     {
                         Name = FullName(mgr),
-                        Action = ManagerActionType.SetCashOutDrawer,
+                        Action = ManagerActionType.SetCashOutDrawer.ToString(),
                         ManagerEmail = mgr.UserEmail,
                         CashierName = FullName(t.Cashier),
                         CashierEmail = t.Cashier.UserEmail,
-                        Amount = t.CashOutDrawerAmount.Value.ToString("C"),
-                        ActionDate = t.TsOut.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
+                        Amount = string.Format(CultureInfo.InvariantCulture, "₱{0:N2}", t.CashInDrawerAmount.Value),
+                        ActionDate = t.TsOut.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
+                        SortActionDate = t.TsOut.Value.LocalDateTime
                     });
                 }
             }
 
-            throw new NotImplementedException();
+           return logs
+                .OrderBy(l => l.SortActionDate)
+                .ToList();
         }
     }
 }

@@ -6,9 +6,11 @@ using EBISX_POS.API.Services.DTO.Order;
 using EBISX_POS.API.Services.DTO.Report;
 using EBISX_POS.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Client;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 
 namespace EBISX_POS.API.Services.Repositories
 {
@@ -16,29 +18,27 @@ namespace EBISX_POS.API.Services.Repositories
     {
         public async Task<(bool, string)> AddCurrentOrderVoid(AddCurrentOrderVoidDTO voidOrder)
         {
-            // ✅ Collect valid menu IDs (avoiding unnecessary IDs)
-            var menuIds = new List<int?> { voidOrder.menuId, voidOrder.drinkId, voidOrder.addOnId }
-                .Where(id => id > 0)
-                .Cast<int>()
+            // Efficiently collect valid menu IDs
+            var menuIds = new[] { voidOrder.menuId, voidOrder.drinkId, voidOrder.addOnId }
+                .Where(id => id.HasValue && id > 0)
+                .Select(id => id.Value)
                 .ToList();
 
-            // ✅ Fetch relevant menu items in a single query
+            // Single query to fetch all relevant menu items
             var menuItems = await _dataContext.Menu
                 .Where(m => menuIds.Contains(m.Id))
                 .ToDictionaryAsync(m => m.Id);
 
-            // ✅ Retrieve selected items (null if not found)
             var menu = menuItems.GetValueOrDefault(voidOrder.menuId ?? 0);
             var drink = menuItems.GetValueOrDefault(voidOrder.drinkId ?? 0);
             var addOn = menuItems.GetValueOrDefault(voidOrder.addOnId ?? 0);
 
-            // ✅ Validation: At least one valid item must be selected
             if (menu == null && drink == null && addOn == null)
             {
                 return (false, "At least one item (Menu, Drink, or AddOn) must be selected.");
             }
 
-            // ✅ Check for pending order with the active cashier
+            // Fetch existing order with includes
             var currentOrder = await _dataContext.Order
                 .Include(o => o.Items)
                 .Include(o => o.Cashier)
@@ -49,37 +49,45 @@ namespace EBISX_POS.API.Services.Repositories
                     o.Cashier.IsActive
                 );
 
-            // ✅ Create a new order if none exists
+            User managerUser = null;
+            User cashierUser = null;
+            Dictionary<string, User> users = null;
+
             if (currentOrder == null)
             {
-                var users = await _dataContext.User
-                    .Where(u => (u.UserEmail == voidOrder.cashierEmail || u.UserEmail == voidOrder.managerEmail) && u.IsActive)
+                // Fetch required users in a single query
+                var userEmails = new[] { voidOrder.cashierEmail, voidOrder.managerEmail };
+                users = await _dataContext.User
+                    .Where(u => userEmails.Contains(u.UserEmail) && u.IsActive)
                     .ToDictionaryAsync(u => u.UserEmail);
 
-                if (!users.ContainsKey(voidOrder.cashierEmail)) return (false, "Cashier not found.");
-                if (!users.ContainsKey(voidOrder.managerEmail)) return (false, "Unauthorized Card!");
+                if (!users.TryGetValue(voidOrder.cashierEmail, out cashierUser) || cashierUser.UserRole != "Cashier")
+                    return (false, "Cashier not found.");
 
+                if (!users.TryGetValue(voidOrder.managerEmail, out managerUser) || managerUser.UserRole == "Cashier")
+                    return (false, "Unauthorized Card!");
+
+                // Create new order
                 currentOrder = new Order
                 {
                     OrderType = "Cancelled",
                     TotalAmount = 0m,
                     CreatedAt = DateTimeOffset.Now,
-                    Cashier = users[voidOrder.cashierEmail],
+                    Cashier = cashierUser,
                     IsPending = false,
                     IsCancelled = true,
-                    Items = new List<Item>()
+                    Items = new List<Item>(),
+                    UserLog = new List<UserLog>()
                 };
 
                 await _dataContext.Order.AddAsync(currentOrder);
             }
 
-            // ✅ Track total amount of voided items
             decimal totalAmount = 0m;
 
-            // ✅ Add voided items efficiently
-            void AddVoidItem(Menu? item, decimal? customPrice = null, Item? parentMeal = null, bool isDrink = false, bool isAddOn = false)
+            Item AddVoidItem(Menu item, decimal? customPrice = null, Item parentMeal = null, bool isDrink = false, bool isAddOn = false)
             {
-                if (item == null) return;
+                if (item == null) return null;
 
                 var voidedItem = new Item
                 {
@@ -96,38 +104,48 @@ namespace EBISX_POS.API.Services.Repositories
 
                 currentOrder.Items.Add(voidedItem);
                 totalAmount += (voidedItem.ItemPrice ?? 0m) * (voidedItem.ItemQTY ?? 1);
+                return voidedItem;
             }
 
-            // ✅ Void Menu (can have drink/addOn linked)
-            var mealItem = menu != null ? new Item
-            {
-                ItemQTY = voidOrder.qty,
-                ItemPrice = menu.MenuPrice,
-                Menu = menu,
-                Order = currentOrder,
-                IsVoid = true,
-                VoidedAt = DateTimeOffset.Now
-            } : null;
+            // Add items using unified method
+            var mealItem = AddVoidItem(menu);
+            AddVoidItem(drink, voidOrder.drinkPrice > 0 ? voidOrder.drinkPrice : null, mealItem, isDrink: true);
+            AddVoidItem(addOn, voidOrder.addOnPrice > 0 ? voidOrder.addOnPrice : null, mealItem, isAddOn: true);
 
-            if (mealItem != null)
+            // Get users for logging
+            if (currentOrder.Cashier == null) // New order case
             {
-                currentOrder.Items.Add(mealItem);
-                totalAmount += (mealItem.ItemPrice ?? 0m) * (mealItem.ItemQTY ?? 1);
+                managerUser ??= users[voidOrder.managerEmail];
+                cashierUser ??= users[voidOrder.cashierEmail];
+            }
+            else // Existing order case
+            {
+                cashierUser = currentOrder.Cashier;
+                managerUser = await _dataContext.User
+                    .FirstOrDefaultAsync(u =>
+                        u.UserEmail == voidOrder.managerEmail &&
+                        u.IsActive &&
+                        u.UserRole != "Cashier"
+                    );
             }
 
-            // ✅ Void Drink and AddOn (linked to meal if applicable)
-            AddVoidItem(drink, voidOrder.drinkPrice > 0 ? voidOrder.drinkPrice : drink?.MenuPrice, mealItem, isDrink: true);
-            AddVoidItem(addOn, voidOrder.addOnPrice > 0 ? voidOrder.addOnPrice : addOn?.MenuPrice, mealItem, isAddOn: true);
+            if (managerUser == null)
+                return (false, "Invalid manager credentials.");
 
-            // ✅ Update total order amount
-            //currentOrder.TotalAmount += totalAmount;
+            currentOrder.UserLog ??= new List<UserLog>();
 
-            // ✅ Save changes to database
+            currentOrder.UserLog.Add(
+                new UserLog()
+                {
+                    Manager = managerUser,
+                    Cashier = cashierUser,
+                    Action = $"Cancel Order: {currentOrder.Id:D12}"
+                }
+            );
+
             await _dataContext.SaveChangesAsync();
-
             return (true, "Voided items added successfully.");
         }
-
         public async Task<(bool, string)> AddOrderItem(AddOrderDTO addOrder)
         {
             var menuIds = new List<int?> { addOrder.menuId, addOrder.drinkId, addOrder.addOnId }
@@ -342,6 +360,18 @@ namespace EBISX_POS.API.Services.Repositories
                 IsPWD = !addPwdScDiscount.IsSeniorDisc
             });
 
+
+            currentOrder.UserLog ??= new List<UserLog>();
+
+            currentOrder.UserLog.Add(
+                new UserLog()
+                {
+                    Manager = manager,
+                    Cashier = cashier,
+                    Action = $"Discount {(addPwdScDiscount.IsSeniorDisc ? "Senior" : "PWD")} Order: {currentOrder.Id:D12}"
+                }
+            );
+
             // Save changes to the database.
             await _dataContext.SaveChangesAsync();
 
@@ -385,6 +415,18 @@ namespace EBISX_POS.API.Services.Repositories
             currentOrder.EligibleDiscNames = addOtherDiscount.DiscountName;
             currentOrder.DiscountPercent = addOtherDiscount.DiscPercent;
 
+
+            currentOrder.UserLog ??= new List<UserLog>();
+
+            currentOrder.UserLog.Add(
+                new UserLog()
+                {
+                    Manager = manager,
+                    Cashier = cashier,
+                    Action = $"Other Discount Order: {currentOrder.Id:D12}"
+                }
+            );
+
             await _dataContext.SaveChangesAsync();
 
             return (true, "Discount applied successfully.");
@@ -422,11 +464,12 @@ namespace EBISX_POS.API.Services.Repositories
             // Cancel the order
             currentOrder.IsPending = false;
             currentOrder.IsCancelled = true;
-            currentOrder.ManagerLog ??= new List<UserLog>();
-            currentOrder.ManagerLog.Add(new UserLog
+            currentOrder.UserLog ??= new List<UserLog>();
+            currentOrder.UserLog.Add(new UserLog
             {
                 Manager = manager,
-                Action = "Order Cancelled",
+                Cashier = cashier,
+                Action = $"Cancel Order: {currentOrder.Id:D12}",
             });
 
             // Void all items in the order
@@ -512,6 +555,13 @@ namespace EBISX_POS.API.Services.Repositories
             currentOrder.Coupon.Add(availedCoupon);
             currentOrder.TotalAmount += availedCoupon.PromoAmount ?? 0m;
             currentOrder.DiscountType = DiscountTypeEnum.Coupon.ToString();
+            currentOrder.UserLog ??= new List<UserLog>();
+            currentOrder.UserLog.Add(new UserLog
+            {
+                Manager = manager,
+                Cashier = cashier,
+                Action = $"Avail Coupon {availedCoupon.Description} on Order: {currentOrder.Id:D12}",
+            });
 
             availedCoupon.IsAvailable = false;
             availedCoupon.UpdatedAt = now;
@@ -579,6 +629,13 @@ namespace EBISX_POS.API.Services.Repositories
                 .Where(i => !i.IsVoid)
                 .Sum(i => (i.ItemPrice ?? 0m) * (i.ItemQTY ?? 1));
 
+            order.UserLog ??= new List<UserLog>();
+            order.UserLog.Add(new UserLog
+            {
+                Cashier = cashier,
+                Action = $"Updated item quantity on Order: {order.Id:D12}"
+            });
+
             await _dataContext.SaveChangesAsync();
 
             return (true, $"Quantity updated to {editOrder.qty}.");
@@ -626,6 +683,13 @@ namespace EBISX_POS.API.Services.Repositories
             finishOrder.VatExempt = finalizeOrder.VatExempt;
             finishOrder.VatSales = finalizeOrder.VatSales;
             finishOrder.VatAmount = finalizeOrder.VatAmount;
+
+            finishOrder.UserLog ??= new List<UserLog>();
+            finishOrder.UserLog.Add(new UserLog
+            {
+                Cashier = cashier,
+                Action = $"Successfull Order: {finishOrder.Id:D12}"
+            });
 
             // Add journal entries
             await _journal.AddItemsJournal(finishOrder.Id);
@@ -785,7 +849,7 @@ namespace EBISX_POS.API.Services.Repositories
                             o.Cashier.IsActive &&
                             !string.IsNullOrEmpty(o.DiscountType) &&
                             !knownDiscountTypes.Contains(o.DiscountType))
-                .Select(o=> new GetCurrentOrderItemsDTO
+                .Select(o => new GetCurrentOrderItemsDTO
                 {
                     EntryId = "Other Discount",
                     HasDiscount = true,
@@ -843,7 +907,7 @@ namespace EBISX_POS.API.Services.Repositories
 
             // ✅ Merge regular orders with coupon orders.
             groupedItems.AddRange(couponItems);
-            if(orderWithOtherDiscount != null)
+            if (orderWithOtherDiscount != null)
                 groupedItems.Add(orderWithOtherDiscount);
 
             return groupedItems;
@@ -900,6 +964,14 @@ namespace EBISX_POS.API.Services.Repositories
                     currentOrder.TotalAmount -= promo.PromoAmount ?? 0m;
                     currentOrder.DiscountType = DiscountTypeEnum.Promo.ToString();
                     currentOrder.DiscountAmount = promo.PromoAmount;
+
+                    currentOrder.UserLog ??= new List<UserLog>();
+                    currentOrder.UserLog.Add(new UserLog
+                    {
+                        Manager = manager,
+                        Cashier = cashier,
+                        Action = $"Avail Promo {promo.Description} on Order: {currentOrder.Id:D12}",
+                    });
 
                     // Mark the promo as used
                     promo.IsAvailable = false;
@@ -1022,6 +1094,14 @@ namespace EBISX_POS.API.Services.Repositories
                 }
             }
 
+            order.UserLog ??= new List<UserLog>();
+            order.UserLog.Add(new UserLog
+            {
+                Manager = manager,
+                Cashier = cashier,
+                Action = $"Void item on Order: {order.Id:D12}",
+            });
+
             await _dataContext.SaveChangesAsync();
 
             return (true, relatedItems.Count == 0 ? "Solo item voided." : "Meal and related items voided.");
@@ -1089,8 +1169,8 @@ namespace EBISX_POS.API.Services.Repositories
             }
 
             orderToRefund.IsReturned = true;
-            orderToRefund.ManagerLog ??= new List<UserLog>();
-            orderToRefund.ManagerLog.Add(new UserLog
+            orderToRefund.UserLog ??= new List<UserLog>();
+            orderToRefund.UserLog.Add(new UserLog
             {
                 Manager = manager,
                 Action = "Order Returned",

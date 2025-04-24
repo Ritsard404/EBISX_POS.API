@@ -14,8 +14,10 @@ namespace EBISX_POS.API.Services.DTO.Report
         public string? CashierEmail { get; set; }
         public string? Amount { get; set; }
 
-        public required ManagerActionType Action { get; set; }
+        public required string Action { get; set; }
         public required string ActionDate { get; set; }
+        [JsonIgnore]
+        public required DateTime SortActionDate { get; set; }
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
@@ -32,7 +34,7 @@ namespace EBISX_POS.API.Services.DTO.Report
         SetCashInDrawer,
         [EnumMember(Value = "Set Cash Out Drawer")]
         SetCashOutDrawer,
-        [EnumMember(Value = "Cash With Draw")]
+        [EnumMember(Value = "Cash WithDraw")]
         CashWithdraw,
         ZReport,
 
