@@ -45,9 +45,9 @@ namespace EBISX_POS.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ManagerActionLog()
+        public async Task<IActionResult> ManagerActionLog(bool isManagerLog)
         {
-            return Ok(await _report.ManagerActionLog());
+            return Ok(await _report.UserActionLog(isManagerLog));
         }
     }
 }

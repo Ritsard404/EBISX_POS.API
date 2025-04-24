@@ -621,109 +621,108 @@ namespace EBISX_POS.API.Services.Repositories
             return orderId.HasValue ? orderId.Value.ToString("D12") : 0.ToString("D12");
         }
 
-        public async Task<List<ManagerActionLogDTO>> ManagerActionLog()
+        public async Task<List<UserActionLogDTO>> UserActionLog(bool isManagerLog)
         {
+            var logs = new List<UserActionLogDTO>();
 
-            var logs = new List<ManagerActionLogDTO>();
-
-            var managerLogs = await _dataContext.UserLog
-                .Include(m => m.Timestamp)
+            // Common query parts
+            var userLogsQuery = _dataContext.UserLog
                 .Include(m => m.Cashier)
                 .Include(m => m.Manager)
-                .Where(c => c.Manager != null)
-                .Select(m => new ManagerActionLogDTO
+                .Where(c => isManagerLog ? c.Manager != null : c.Cashier != null);
+
+            var userLogs = await userLogsQuery
+                .Select(m => new UserActionLogDTO
                 {
-                    Name = m.Manager.UserFName + " " + m.Manager.UserLName,
+                    Name = isManagerLog
+                        ? m.Manager.UserFName + " " + m.Manager.UserLName
+                        : m.Cashier.UserFName + " " + m.Cashier.UserLName,
                     CashierName = m.Cashier.UserFName + " " + m.Cashier.UserLName,
                     Action = m.Action,
                     ManagerEmail = m.Manager.UserEmail,
                     CashierEmail = m.Cashier.UserEmail,
-                    Amount = string.Format(CultureInfo.InvariantCulture, "₱{0:N2}", m.WithdrawAmount),
+                    Amount = m.WithdrawAmount > 0
+                        ? string.Format(CultureInfo.InvariantCulture, "₱{0:N2}", m.WithdrawAmount)
+                        : null,
                     ActionDate = m.CreatedAt.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
                     SortActionDate = m.CreatedAt.ToLocalTime()
                 })
                 .ToListAsync();
 
-            logs.AddRange(managerLogs);
+            logs.AddRange(userLogs);
 
+            // Process timestamps
             var timestamps = await _dataContext.Timestamp
                 .AsNoTracking()
                 .Include(t => t.Cashier)
                 .Include(t => t.ManagerIn)
                 .Include(t => t.ManagerOut)
-                .ToListAsync(); foreach (var t in timestamps)
-            {
-                // Helper to format user full name
-                static string FullName(User u) => $"{u.UserFName} {u.UserLName}";
+                .ToListAsync();
 
-                // Login action (clock-in)
+            ProcessTimestamps(timestamps, logs);
+
+            return logs.OrderBy(l => l.SortActionDate).ToList();
+        }
+        private void ProcessTimestamps(List<Timestamp> timestamps, List<UserActionLogDTO> logs)
+        {
+            foreach (var t in timestamps)
+            {
+                var cashierName = $"{t.Cashier.UserFName} {t.Cashier.UserLName}";
+                var cashierEmail = t.Cashier.UserEmail;
+
+                // Login action
                 if (t.TsIn.HasValue && !t.TsOut.HasValue)
                 {
-                    logs.Add(new ManagerActionLogDTO
-                    {
-                        Name = FullName(t.ManagerIn),
-                        Action = ManagerActionType.Login.ToString(),
-                        ManagerEmail = t.ManagerIn.UserEmail,
-                        CashierName = FullName(t.Cashier),
-                        CashierEmail = t.Cashier.UserEmail,
-                        ActionDate = t.TsIn.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
-                        SortActionDate = t.TsIn.Value.LocalDateTime
-                    });
+                    AddTimestampLog(logs, t.ManagerIn, t.TsIn.Value,
+                        ManagerActionType.Login, t.CashInDrawerAmount, cashierName, cashierEmail);
                 }
 
-                // Logout action (clock-out)
+                // Logout action
                 if (t.TsOut.HasValue)
                 {
                     var mgr = t.ManagerOut ?? t.ManagerIn;
-                    logs.Add(new ManagerActionLogDTO
-                    {
-                        Name = FullName(mgr),
-                        Action = ManagerActionType.Logout.ToString(),
-                        ManagerEmail = mgr.UserEmail,
-                        CashierName = FullName(t.Cashier),
-                        CashierEmail = t.Cashier.UserEmail,
-                        ActionDate = t.TsOut.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
-                        SortActionDate = t.TsOut.Value.LocalDateTime
-                    });
+                    AddTimestampLog(logs, mgr, t.TsOut.Value,
+                        ManagerActionType.Logout, null, cashierName, cashierEmail);
                 }
 
-                // Cash In Drawer
-                if (t.CashInDrawerAmount.HasValue && !t.CashOutDrawerAmount.HasValue)
+                // Cash operations
+                if (t.CashInDrawerAmount.HasValue)
                 {
-                    logs.Add(new ManagerActionLogDTO
-                    {
-                        Name = FullName(t.ManagerIn),
-                        Action = ManagerActionType.SetCashInDrawer.ToString(),
-                        ManagerEmail = t.ManagerIn.UserEmail,
-                        CashierName = FullName(t.Cashier),
-                        CashierEmail = t.Cashier.UserEmail,
-                        Amount = string.Format(CultureInfo.InvariantCulture, "₱{0:N2}", t.CashInDrawerAmount.Value),
-                        ActionDate = t.TsIn.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
-                        SortActionDate = t.TsIn.Value.LocalDateTime
-                    });
+                    AddTimestampLog(logs, t.ManagerIn, t.TsIn.Value,
+                        ManagerActionType.SetCashInDrawer, t.CashInDrawerAmount, cashierName, cashierEmail);
                 }
 
-                // Cash Out Drawer
                 if (t.CashOutDrawerAmount.HasValue)
                 {
                     var mgr = t.ManagerOut ?? t.ManagerIn;
-                    logs.Add(new ManagerActionLogDTO
-                    {
-                        Name = FullName(mgr),
-                        Action = ManagerActionType.SetCashOutDrawer.ToString(),
-                        ManagerEmail = mgr.UserEmail,
-                        CashierName = FullName(t.Cashier),
-                        CashierEmail = t.Cashier.UserEmail,
-                        Amount = string.Format(CultureInfo.InvariantCulture, "₱{0:N2}", t.CashInDrawerAmount.Value),
-                        ActionDate = t.TsOut.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
-                        SortActionDate = t.TsOut.Value.LocalDateTime
-                    });
+                    AddTimestampLog(logs, mgr, t.TsOut.Value,
+                        ManagerActionType.SetCashOutDrawer, t.CashOutDrawerAmount, cashierName, cashierEmail);
                 }
             }
+        }
 
-           return logs
-                .OrderBy(l => l.SortActionDate)
-                .ToList();
+        private void AddTimestampLog(
+            List<UserActionLogDTO> logs,
+            User manager,
+            DateTimeOffset timestamp,
+            ManagerActionType actionType,
+            decimal? amount,
+            string cashierName,
+            string cashierEmail)
+        {
+            logs.Add(new UserActionLogDTO
+            {
+                Name = $"{manager.UserFName} {manager.UserLName}",
+                Action = actionType.ToString(),
+                ManagerEmail = manager.UserEmail,
+                CashierName = cashierName,
+                CashierEmail = cashierEmail,
+                Amount = amount.HasValue
+                    ? string.Format(CultureInfo.InvariantCulture, "₱{0:N2}", amount.Value)
+                    : null,
+                ActionDate = timestamp.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
+                SortActionDate = timestamp.LocalDateTime
+            });
         }
     }
 }

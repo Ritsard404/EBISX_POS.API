@@ -6,10 +6,10 @@ using System.Text.Json.Serialization;
 
 namespace EBISX_POS.API.Services.DTO.Report
 {
-    public class ManagerActionLogDTO
+    public class UserActionLogDTO
     {
-        public required string Name { get; set; }
-        public required string ManagerEmail { get; set; }
+        public string? Name { get; set; }
+        public string? ManagerEmail { get; set; }
         public string? CashierName { get; set; }
         public string? CashierEmail { get; set; }
         public string? Amount { get; set; }
