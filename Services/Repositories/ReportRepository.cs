@@ -459,7 +459,8 @@ namespace EBISX_POS.API.Services.Repositories
 
             // Withdrawal Amount
             var withdrawnAmount = allTimestamps
-                .Where(c => c.TsOut!.Value.LocalDateTime >= startDate)
+                .Where(t => t.TsOut.HasValue
+                    && t.TsOut.Value.LocalDateTime >= startDate)
                 .SelectMany(t => t.ManagerLog)
                 .Where(mw => mw?.Action == "Withdrawal")
                 .Sum(mw => mw?.WithdrawAmount ?? defaultDecimal);
@@ -489,13 +490,19 @@ namespace EBISX_POS.API.Services.Repositories
 
             // Cash in Drawer
             decimal cashInDrawer = allTimestamps
-                .Where(c => c.TsOut!.Value.LocalDateTime >= startDate)
+                .Where(t => t.TsOut.HasValue
+                    && t.TsOut.Value.LocalDateTime >= startDate)
                 .Sum(s => s.CashOutDrawerAmount) ?? defaultDecimal;
 
             // Opening Fund
             decimal openingFund = allTimestamps
-                .Where(c => c.TsOut!.Value.LocalDateTime >= startDate)
-                .LastOrDefault()?.CashInDrawerAmount ?? defaultDecimal;
+                .Where(t => t.TsOut.HasValue
+                            && t.TsOut.Value.LocalDateTime >= startDate)
+                // ensure ordering so LastOrDefault() really is the “last”
+                .OrderBy(t => t.TsOut.Value.LocalDateTime)
+                .LastOrDefault()?
+                .CashInDrawerAmount
+                .GetValueOrDefault(defaultDecimal) ?? defaultDecimal;
 
             decimal expectedCash = openingFund + cashSales;
             decimal actualCash = cashInDrawer + withdrawnAmount;

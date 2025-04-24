@@ -17,6 +17,10 @@ namespace EBISX_POS.API.Data
             {
                 // Retrieve FilePaths configuration from DI container.
                 var filePaths = serviceProvider.GetRequiredService<IOptions<FilePaths>>().Value;
+                if (!Directory.Exists(filePaths.ImagePath))
+                {
+                    Directory.CreateDirectory(filePaths.ImagePath);
+                }
 
                 // Only seed if the database is completely empty
                 if (!context.Database.CanConnect() || !context.User.Any())
