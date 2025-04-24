@@ -45,7 +45,7 @@ namespace EBISX_POS.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ManagerActionLog(bool isManagerLog, DateTime fromDate, DateTime toDate)
+        public async Task<IActionResult> UserActionLog(bool isManagerLog, DateTime fromDate, DateTime toDate)
         {
             return Ok(await _report.UserActionLog(isManagerLog, fromDate, toDate));
         }
