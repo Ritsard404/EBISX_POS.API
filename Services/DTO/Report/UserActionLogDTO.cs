@@ -17,7 +17,7 @@ namespace EBISX_POS.API.Services.DTO.Report
         public required string Action { get; set; }
         public required string ActionDate { get; set; }
         [JsonIgnore]
-        public required DateTime SortActionDate { get; set; }
+        public DateTime SortActionDate { get; set; }
     }
 
     [JsonConverter(typeof(StringEnumConverter))]

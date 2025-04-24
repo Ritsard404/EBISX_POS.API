@@ -621,15 +621,21 @@ namespace EBISX_POS.API.Services.Repositories
             return orderId.HasValue ? orderId.Value.ToString("D12") : 0.ToString("D12");
         }
 
-        public async Task<List<UserActionLogDTO>> UserActionLog(bool isManagerLog)
+        public async Task<List<UserActionLogDTO>> UserActionLog(bool isManagerLog, DateTime fromDate, DateTime toDate)
         {
             var logs = new List<UserActionLogDTO>();
+            var start = fromDate.Date;
+            var end = toDate.Date.AddDays(1);
 
             // Common query parts
             var userLogsQuery = _dataContext.UserLog
                 .Include(m => m.Cashier)
                 .Include(m => m.Manager)
-                .Where(c => isManagerLog ? c.Manager != null : c.Cashier != null);
+                .Where(c =>
+                    ((isManagerLog && c.Manager != null) || (!isManagerLog && c.Cashier != null)) &&
+                    c.CreatedAt >= start &&
+                    c.CreatedAt < end);
+
 
             var userLogs = await userLogsQuery
                 .Select(m => new UserActionLogDTO
@@ -657,6 +663,9 @@ namespace EBISX_POS.API.Services.Repositories
                 .Include(t => t.Cashier)
                 .Include(t => t.ManagerIn)
                 .Include(t => t.ManagerOut)
+                .Where(t =>
+                    (t.TsIn.HasValue && t.TsIn.Value.Date >= start && t.TsIn.Value.Date < end) ||
+                    (t.TsOut.HasValue && t.TsOut.Value.Date >= start && t.TsOut.Value.Date < end))
                 .ToListAsync();
 
             ProcessTimestamps(timestamps, logs);
@@ -674,7 +683,7 @@ namespace EBISX_POS.API.Services.Repositories
                 if (t.TsIn.HasValue && !t.TsOut.HasValue)
                 {
                     AddTimestampLog(logs, t.ManagerIn, t.TsIn.Value,
-                        ManagerActionType.Login, t.CashInDrawerAmount, cashierName, cashierEmail);
+                        "Log In", t.CashInDrawerAmount, cashierName, cashierEmail);
                 }
 
                 // Logout action
@@ -682,33 +691,33 @@ namespace EBISX_POS.API.Services.Repositories
                 {
                     var mgr = t.ManagerOut ?? t.ManagerIn;
                     AddTimestampLog(logs, mgr, t.TsOut.Value,
-                        ManagerActionType.Logout, null, cashierName, cashierEmail);
+                        "Log Out", null, cashierName, cashierEmail);
                 }
 
                 // Cash operations
                 if (t.CashInDrawerAmount.HasValue)
                 {
                     AddTimestampLog(logs, t.ManagerIn, t.TsIn.Value,
-                        ManagerActionType.SetCashInDrawer, t.CashInDrawerAmount, cashierName, cashierEmail);
+                        "Set Cash in Drawer", t.CashInDrawerAmount, cashierName, cashierEmail);
                 }
 
                 if (t.CashOutDrawerAmount.HasValue)
                 {
                     var mgr = t.ManagerOut ?? t.ManagerIn;
                     AddTimestampLog(logs, mgr, t.TsOut.Value,
-                        ManagerActionType.SetCashOutDrawer, t.CashOutDrawerAmount, cashierName, cashierEmail);
+                        "Set Cash out Drawer", t.CashOutDrawerAmount, cashierName, cashierEmail);
                 }
             }
         }
 
         private void AddTimestampLog(
             List<UserActionLogDTO> logs,
-            User manager,
+            User? manager,
             DateTimeOffset timestamp,
-            ManagerActionType actionType,
+            string actionType,
             decimal? amount,
-            string cashierName,
-            string cashierEmail)
+            string? cashierName,
+            string? cashierEmail)
         {
             logs.Add(new UserActionLogDTO
             {
