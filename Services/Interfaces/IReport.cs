@@ -9,5 +9,6 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<GetInvoiceDTO> GetInvoiceById(long invId);
         Task<XInvoiceReportDTO> XInvoiceReport();
         Task<ZInvoiceReportDTO> ZInvoiceReport();
+        Task<List<ManagerActionLogDTO>> ManagerActionLog();
     }
 }

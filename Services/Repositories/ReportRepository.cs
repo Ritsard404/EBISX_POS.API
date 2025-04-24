@@ -34,9 +34,7 @@ namespace EBISX_POS.API.Services.Repositories
                         o.TotalAmount != 0
                     )
                     .SumAsync(o =>
-                        o.CashTendered!.Value > o.TotalAmount
-                            ? o.TotalAmount
-                            : o.CashTendered!.Value
+                        o.CashTendered!.Value - o.ChangeAmount!.Value
                     );
 
             var phCulture = new CultureInfo("en-PH");
@@ -620,6 +618,11 @@ namespace EBISX_POS.API.Services.Repositories
         private string GetOrderNumber(long? orderId)
         {
             return orderId.HasValue ? orderId.Value.ToString("D12") : 0.ToString("D12");
+        }
+
+        public Task<List<ManagerActionLogDTO>> ManagerActionLog()
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -4,6 +4,7 @@ using EBISX_POS.API.Services.Repositories;
 using EBISX_POS.API.Settings;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace EBISX_POS.API.Extensions
 {
     public static class ServiceCollectionExtensions
@@ -31,7 +32,6 @@ namespace EBISX_POS.API.Extensions
             });
 
             services.AddControllers();
-            services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
             services.AddLogging();
             services.AddOptions();
@@ -66,4 +66,4 @@ namespace EBISX_POS.API.Extensions
             return services;
         }
     }
-} 
+}
