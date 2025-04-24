@@ -2,6 +2,7 @@
 {
     public class AddOtherDiscountDTO
     {
+
         public required string DiscountName { get; set; }
         public required int DiscPercent { get; set; }
         public required string ManagerEmail { get; set; }
