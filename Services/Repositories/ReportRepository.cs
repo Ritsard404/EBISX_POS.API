@@ -640,9 +640,7 @@ namespace EBISX_POS.API.Services.Repositories
             var userLogs = await userLogsQuery
                 .Select(m => new UserActionLogDTO
                 {
-                    Name = isManagerLog
-                        ? m.Manager.UserFName + " " + m.Manager.UserLName
-                        : m.Cashier.UserFName + " " + m.Cashier.UserLName,
+                    Name =  m.Manager.UserFName + " " + m.Manager.UserLName,
                     CashierName = m.Cashier.UserFName + " " + m.Cashier.UserLName,
                     Action = m.Action,
                     ManagerEmail = m.Manager.UserEmail,
@@ -676,39 +674,47 @@ namespace EBISX_POS.API.Services.Repositories
         {
             foreach (var t in timestamps)
             {
-                var cashierName = $"{t.Cashier.UserFName} {t.Cashier.UserLName}";
-                var cashierEmail = t.Cashier.UserEmail;
+                var cashierName = t.Cashier != null
+                    ? $"{t.Cashier.UserFName} {t.Cashier.UserLName}"
+                    : "—";
+                var cashierEmail = t.Cashier?.UserEmail ?? "—";
 
-                // Login action
-                if (t.TsIn.HasValue && !t.TsOut.HasValue)
+                // Login (TsIn)
+                if (t.TsIn.HasValue)
                 {
-                    AddTimestampLog(logs, t.ManagerIn, t.TsIn.Value,
-                        "Log In", t.CashInDrawerAmount, cashierName, cashierEmail);
+                    var tsIn = t.TsIn.Value;
+                    if (t.CashInDrawerAmount.HasValue)
+                    {
+                        AddTimestampLog(logs, t.ManagerIn, tsIn,
+                            "Set Cash in Drawer", t.CashInDrawerAmount, cashierName, cashierEmail);
+                    }
+                    else
+                    {
+                        AddTimestampLog(logs, t.ManagerIn, tsIn,
+                            "Log In", null, cashierName, cashierEmail);
+                    }
                 }
 
-                // Logout action
+                // Logout and/or Cash Out (TsOut)
                 if (t.TsOut.HasValue)
                 {
+                    var tsOut = t.TsOut.Value;
                     var mgr = t.ManagerOut ?? t.ManagerIn;
-                    AddTimestampLog(logs, mgr, t.TsOut.Value,
-                        "Log Out", null, cashierName, cashierEmail);
-                }
 
-                // Cash operations
-                if (t.CashInDrawerAmount.HasValue)
-                {
-                    AddTimestampLog(logs, t.ManagerIn, t.TsIn.Value,
-                        "Set Cash in Drawer", t.CashInDrawerAmount, cashierName, cashierEmail);
-                }
-
-                if (t.CashOutDrawerAmount.HasValue)
-                {
-                    var mgr = t.ManagerOut ?? t.ManagerIn;
-                    AddTimestampLog(logs, mgr, t.TsOut.Value,
-                        "Set Cash out Drawer", t.CashOutDrawerAmount, cashierName, cashierEmail);
+                    if (t.CashOutDrawerAmount.HasValue)
+                    {
+                        AddTimestampLog(logs, mgr, tsOut,
+                            "Set Cash out Drawer", t.CashOutDrawerAmount, cashierName, cashierEmail);
+                    }
+                    else
+                    {
+                        AddTimestampLog(logs, mgr, tsOut,
+                            "Log Out", null, cashierName, cashierEmail);
+                    }
                 }
             }
         }
+
 
         private void AddTimestampLog(
             List<UserActionLogDTO> logs,
@@ -730,7 +736,7 @@ namespace EBISX_POS.API.Services.Repositories
                     ? string.Format(CultureInfo.InvariantCulture, "₱{0:N2}", amount.Value)
                     : null,
                 ActionDate = timestamp.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt"),
-                SortActionDate = timestamp.LocalDateTime
+                SortActionDate = timestamp.ToLocalTime().DateTime
             });
         }
     }
