@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace EBISX_POS.API.Services.Repositories
 {
-    public class AuthRepository(DataContext _dataContext) : IAuth
+    public class AuthRepository(DataContext _dataContext, IServiceProvider _services) : IAuth
     {
         public async Task<List<CashierDTO>> Cashiers()
         {
@@ -75,6 +75,22 @@ namespace EBISX_POS.API.Services.Repositories
             return (true, "Cash withdrawal recorded.");
         }
 
+        public async Task<(bool, string)> CheckData()
+        {
+            var hasUsers = await _dataContext.User
+                .AnyAsync(a => a.IsActive);
+            var hasMenu = await _dataContext.Menu
+                .AnyAsync();
+
+            if (hasUsers || hasMenu)
+            {
+                // Already has at least one user or one menu item → no need to seed
+                return (false, "Data is already set up; skipping seed.");
+            }
+
+            // No users AND no menus → safe to seed
+            return (true, "No existing data found; ready to seed initial data.");
+        }
 
         public async Task<(bool, string, string)> HasPendingOrder()
         {
@@ -118,6 +134,21 @@ namespace EBISX_POS.API.Services.Repositories
                 .FirstOrDefaultAsync();
 
             return timestamp != null;
+        }
+
+        public async Task<(bool, string)> LoadData()
+        {
+            try
+            {
+                // Perform the actual seeding
+                await SeedData.InitializeAsync(_services);
+                return (true, "Seed data loaded successfully.");
+            }
+            catch (Exception ex)
+            {
+                // You could log ex here
+                return (false, $"Seeding failed: {ex.Message}");
+            }
         }
 
         public async Task<(bool, string, string)> LogIn(LogInDTO logInDTO)

@@ -7,6 +7,8 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<(bool, string, string)> LogIn(LogInDTO logInDTO);
         Task<(bool, string)> LogOut(LogInDTO logOutDTO);
         Task<(bool, string, string)> HasPendingOrder();
+        Task<(bool, string)> CheckData();
+        Task<(bool, string)> LoadData();
         Task<List<CashierDTO>> Cashiers();
 
 

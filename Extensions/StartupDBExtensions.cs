@@ -46,8 +46,8 @@ namespace EBISX_POS.API.Extensions
                     {
                         _logger.LogInformation("Creating POS database...");
                         await dataContext.Database.EnsureCreatedAsync();
-                        _logger.LogInformation("Seeding initial data for POS database...");
-                        await SeedData.InitializeAsync(_services);
+                        //_logger.LogInformation("Seeding initial data for POS database...");
+                        //await SeedData.InitializeAsync(_services);
                     }
                     else
                     {
@@ -64,11 +64,11 @@ namespace EBISX_POS.API.Extensions
                         }
 
                         // Check if we need to seed data
-                        if (!await dataContext.User.AnyAsync())
-                        {
-                            _logger.LogInformation("No users found, seeding initial data...");
-                            await SeedData.InitializeAsync(_services);
-                        }
+                        //if (!await dataContext.User.AnyAsync())
+                        //{
+                        //    _logger.LogInformation("No users found, seeding initial data...");
+                        //    await SeedData.InitializeAsync(_services);
+                        //}
                     }
 
                     // Check if database exists and can connect

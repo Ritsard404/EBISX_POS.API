@@ -37,6 +37,19 @@ namespace EBISX_POS.API.Controllers
             return BadRequest("No Pending Orders");
         }
 
+        [HttpGet]
+        public async Task<IActionResult> CheckData()
+        {
+            var (success, message) = await _auth.CheckData();
+            if (success)
+            {
+
+                return Ok(new { message });
+            }
+
+            return BadRequest(message);
+        }
+
         [HttpPost]
         public async Task<IActionResult> LogIn(LogInDTO logInDTO)
         {
@@ -89,6 +102,19 @@ namespace EBISX_POS.API.Controllers
                 return BadRequest(message);
 
             return Ok(new { message });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> LoadData()
+        {
+            var (success, message) = await _auth.LoadData();
+            if (success)
+            {
+
+                return Ok(new { message });
+            }
+
+            return BadRequest(message);
         }
     }
 }
