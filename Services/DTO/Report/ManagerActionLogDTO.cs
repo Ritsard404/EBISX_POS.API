@@ -12,9 +12,10 @@ namespace EBISX_POS.API.Services.DTO.Report
         public required string ManagerEmail { get; set; }
         public string? CashierName { get; set; }
         public string? CashierEmail { get; set; }
+        public string? Amount { get; set; }
 
         public required ManagerActionType Action { get; set; }
-        public DateTime ActionDate { get; set; }
+        public required string ActionDate { get; set; }
     }
 
     [JsonConverter(typeof(StringEnumConverter))]

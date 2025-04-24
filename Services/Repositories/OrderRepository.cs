@@ -422,8 +422,8 @@ namespace EBISX_POS.API.Services.Repositories
             // Cancel the order
             currentOrder.IsPending = false;
             currentOrder.IsCancelled = true;
-            currentOrder.ManagerLog ??= new List<ManagerLog>();
-            currentOrder.ManagerLog.Add(new ManagerLog
+            currentOrder.ManagerLog ??= new List<UserLog>();
+            currentOrder.ManagerLog.Add(new UserLog
             {
                 Manager = manager,
                 Action = "Order Cancelled",
@@ -1089,8 +1089,8 @@ namespace EBISX_POS.API.Services.Repositories
             }
 
             orderToRefund.IsReturned = true;
-            orderToRefund.ManagerLog ??= new List<ManagerLog>();
-            orderToRefund.ManagerLog.Add(new ManagerLog
+            orderToRefund.ManagerLog ??= new List<UserLog>();
+            orderToRefund.ManagerLog.Add(new UserLog
             {
                 Manager = manager,
                 Action = "Order Returned",

@@ -63,7 +63,7 @@ namespace EBISX_POS.API.Services.Repositories
             if (manager is null)
                 return (false, "Invalid manager credentials.");
 
-            timestamp.ManagerLog.Add(new ManagerLog
+            timestamp.ManagerLog.Add(new UserLog
             {
                 Manager = manager,
                 WithdrawAmount = cash,

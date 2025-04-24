@@ -6,6 +6,7 @@ using EBISX_POS.API.Services.DTO.Report;
 using EBISX_POS.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using System.Threading;
 
 namespace EBISX_POS.API.Services.Repositories
 {
@@ -138,7 +139,7 @@ namespace EBISX_POS.API.Services.Repositories
 
                 // VAT breakdown
                 VatExemptSales = (order.VatExempt ?? 0m).ToString("C2"),
-                VatSales = ((order.TotalAmount - (order.VatExempt ?? 0m)))
+                VatSales = ((order.TotalAmount - (order.VatAmount ?? 0m)))
                                       .ToString("C2"),
                 VatAmount = (order.VatAmount ?? 0m).ToString("C2"),
 
@@ -620,8 +621,170 @@ namespace EBISX_POS.API.Services.Repositories
             return orderId.HasValue ? orderId.Value.ToString("D12") : 0.ToString("D12");
         }
 
-        public Task<List<ManagerActionLogDTO>> ManagerActionLog()
+        public async Task<List<ManagerActionLogDTO>> ManagerActionLog()
         {
+
+            var logs = new List<ManagerActionLogDTO>();
+
+            var cancelledOrders = await _dataContext.Order
+                .Where(o => o.IsCancelled)
+                .ToListAsync();
+
+            var returnedOrders = await _dataContext.Order
+                .Where(o => o.IsReturned)
+                .ToListAsync();
+
+            var voidItems = await _dataContext.Item
+                .Where(o => o.IsVoid)
+                .ToListAsync();
+
+            var discountedItems = await _dataContext.Item
+                .Where(o => o.IsSeniorDiscounted || o.IsPwdDiscounted)
+                .ToListAsync();
+
+            var managerLogs = await _dataContext.ManagerLog
+                .Include(m => m.Timestamp)
+                .Include(m => m.Manager)
+                .ToListAsync();
+
+            //var logIns = await _dataContext.Timestamp
+            //    .Include(m => m.ManagerIn)
+            //    .Include(c => c.Cashier)
+            //    .Where(i => i.TsIn != null && i.TsOut == null)
+            //    .Select(t => new ManagerActionLogDTO()
+            //    {
+            //        Name = t.ManagerIn.UserFName + " " + t.ManagerIn.UserLName,
+            //        Action = ManagerActionType.Login,
+            //        ManagerEmail = t.ManagerIn.UserEmail,
+            //        CashierEmail = t.Cashier.UserEmail,
+            //        CashierName = t.Cashier.UserFName + " " + t.Cashier.UserLName,
+            //        ActionDate = t.TsOut.Value.ToString("MM/dd/yyyy hh:mm tt"),
+
+            //    })
+            //    .ToListAsync();
+
+            //var logOuts = await _dataContext.Timestamp
+            //    .Include(m => m.ManagerOut)
+            //    .Include(c => c.Cashier)
+            //    .Where(i => i.TsOut != null)
+            //    .Select(t => new ManagerActionLogDTO()
+            //    {
+            //        Name = t.ManagerOut.UserFName + " " + t.ManagerOut.UserLName,
+            //        Action = ManagerActionType.Logout,
+            //        ManagerEmail = t.ManagerOut.UserEmail,
+            //        CashierEmail = t.Cashier.UserEmail,
+            //        CashierName = t.Cashier.UserFName + " " + t.Cashier.UserLName,
+            //        ActionDate = t.TsOut.Value.ToString("MM/dd/yyyy hh:mm tt"),
+
+            //    })
+            //    .ToListAsync();
+
+            //var cashIns = await _dataContext.Timestamp
+            //    .Include(m => m.ManagerIn)
+            //    .Include(c => c.Cashier)
+            //    .Where(i => i.CashInDrawerAmount != null && i.CashOutDrawerAmount == null)
+            //    .Select(t => new ManagerActionLogDTO()
+            //    {
+            //        Name = t.ManagerOut.UserFName + " " + t.ManagerOut.UserLName,
+            //        Action = ManagerActionType.SetCashInDrawer,
+            //        ManagerEmail = t.ManagerOut.UserEmail,
+            //        CashierEmail = t.Cashier.UserEmail,
+            //        CashierName = t.Cashier.UserFName + " " + t.Cashier.UserLName,
+            //        Amount = t.CashInDrawerAmount.Value.ToString("C"),
+            //        ActionDate = t.TsIn.Value.ToString("MM/dd/yyyy hh:mm tt"),
+
+            //    })
+            //    .ToListAsync();
+
+            //var cashOuts = await _dataContext.Timestamp
+            //    .Include(m => m.ManagerOut)
+            //    .Include(c => c.Cashier)
+            //    .Where(i => i.CashOutDrawerAmount != null)
+            //    .Select(t => new ManagerActionLogDTO()
+            //    {
+            //        Name = t.ManagerOut.UserFName + " " + t.ManagerOut.UserLName,
+            //        Action = ManagerActionType.SetCashOutDrawer,
+            //        ManagerEmail = t.ManagerOut.UserEmail,
+            //        CashierEmail = t.Cashier.UserEmail,
+            //        CashierName = t.Cashier.UserFName + " " + t.Cashier.UserLName,
+            //        Amount = t.CashOutDrawerAmount.Value.ToString("C"),
+            //        ActionDate = t.TsOut.Value.ToString("MM/dd/yyyy hh:mm tt"),
+
+            //    })
+            //    .ToListAsync();
+
+
+            var timestamps = await _dataContext.Timestamp
+                .AsNoTracking()
+                .Include(t => t.Cashier)
+                .Include(t => t.ManagerIn)
+                .Include(t => t.ManagerOut)
+                .ToListAsync(); foreach (var t in timestamps)
+            {
+                // Helper to format user full name
+                static string FullName(User u) => $"{u.UserFName} {u.UserLName}";
+
+                // Login action (clock-in)
+                if (t.TsIn.HasValue && !t.TsOut.HasValue)
+                {
+                    logs.Add(new ManagerActionLogDTO
+                    {
+                        Name = FullName(t.ManagerIn),
+                        Action = ManagerActionType.Login,
+                        ManagerEmail = t.ManagerIn.UserEmail,
+                        CashierName = FullName(t.Cashier),
+                        CashierEmail = t.Cashier.UserEmail,
+                        ActionDate = t.TsIn.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
+                    });
+                }
+
+                // Logout action (clock-out)
+                if (t.TsOut.HasValue)
+                {
+                    var mgr = t.ManagerOut ?? t.ManagerIn;
+                    logs.Add(new ManagerActionLogDTO
+                    {
+                        Name = FullName(mgr),
+                        Action = ManagerActionType.Logout,
+                        ManagerEmail = mgr.UserEmail,
+                        CashierName = FullName(t.Cashier),
+                        CashierEmail = t.Cashier.UserEmail,
+                        ActionDate = t.TsOut.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
+                    });
+                }
+
+                // Cash In Drawer
+                if (t.CashInDrawerAmount.HasValue && !t.CashOutDrawerAmount.HasValue)
+                {
+                    logs.Add(new ManagerActionLogDTO
+                    {
+                        Name = FullName(t.ManagerIn),
+                        Action = ManagerActionType.SetCashInDrawer,
+                        ManagerEmail = t.ManagerIn.UserEmail,
+                        CashierName = FullName(t.Cashier),
+                        CashierEmail = t.Cashier.UserEmail,
+                        Amount = t.CashInDrawerAmount.Value.ToString("C"),
+                        ActionDate = t.TsIn.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
+                    });
+                }
+
+                // Cash Out Drawer
+                if (t.CashOutDrawerAmount.HasValue)
+                {
+                    var mgr = t.ManagerOut ?? t.ManagerIn;
+                    logs.Add(new ManagerActionLogDTO
+                    {
+                        Name = FullName(mgr),
+                        Action = ManagerActionType.SetCashOutDrawer,
+                        ManagerEmail = mgr.UserEmail,
+                        CashierName = FullName(t.Cashier),
+                        CashierEmail = t.Cashier.UserEmail,
+                        Amount = t.CashOutDrawerAmount.Value.ToString("C"),
+                        ActionDate = t.TsOut.Value.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
+                    });
+                }
+            }
+
             throw new NotImplementedException();
         }
     }
