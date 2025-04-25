@@ -1,6 +1,6 @@
 ﻿using EBISX_POS.API.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using MySqlConnector;
 
 namespace EBISX_POS.API.Extensions
 {
@@ -10,11 +10,48 @@ namespace EBISX_POS.API.Extensions
         {
             private readonly ILogger<DatabaseInitializer> _logger;
             private readonly IServiceProvider _services;
+            private readonly IConfiguration _configuration;
 
-            public DatabaseInitializer(ILogger<DatabaseInitializer> logger, IServiceProvider services)
+            public DatabaseInitializer(ILogger<DatabaseInitializer> logger, IServiceProvider services, IConfiguration configuration)
             {
                 _logger = logger;
                 _services = services;
+                _configuration = configuration;
+            }
+
+            private async Task<bool> CheckMySqlConnectionAsync(string connectionString)
+            {
+                try
+                {
+                    using var connection = new MySqlConnection(connectionString);
+                    await connection.OpenAsync();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to connect to MySQL server");
+                    return false;
+                }
+            }
+
+            private async Task CreateDatabaseIfNotExistsAsync(string connectionString, string databaseName)
+            {
+                // Extract server connection string without database
+                var builder = new MySqlConnectionStringBuilder(connectionString);
+                var serverConnectionString = new MySqlConnectionStringBuilder
+                {
+                    Server = builder.Server,
+                    UserID = builder.UserID,
+                    Password = builder.Password,
+                    Port = builder.Port
+                }.ToString();
+
+                using var connection = new MySqlConnection(serverConnectionString);
+                await connection.OpenAsync();
+
+                using var command = connection.CreateCommand();
+                command.CommandText = $"CREATE DATABASE IF NOT EXISTS `{databaseName}`";
+                await command.ExecuteNonQueryAsync();
             }
 
             private async Task<bool> TableExistsAsync(DbContext context, string tableName)
@@ -38,6 +75,20 @@ namespace EBISX_POS.API.Extensions
             {
                 try
                 {
+                    var posConnectionString = _configuration.GetConnectionString("POSConnection");
+                    var journalConnectionString = _configuration.GetConnectionString("JournalConnection");
+
+                    // Check MySQL server connection
+                    if (!await CheckMySqlConnectionAsync(posConnectionString))
+                    {
+                        _logger.LogError("Cannot connect to MySQL server. Please ensure MySQL server is running.");
+                        return;
+                    }
+
+                    // Create databases if they don't exist
+                    await CreateDatabaseIfNotExistsAsync(posConnectionString, "ebisx_pos");
+                    await CreateDatabaseIfNotExistsAsync(journalConnectionString, "ebisx_journal");
+
                     var dataContext = _services.GetRequiredService<DataContext>();
                     var journalContext = _services.GetRequiredService<JournalContext>();
 
@@ -118,7 +169,8 @@ namespace EBISX_POS.API.Extensions
             var services = scope.ServiceProvider;
             var initializer = new DatabaseInitializer(
                 services.GetRequiredService<ILogger<DatabaseInitializer>>(),
-                services
+                services,
+                services.GetRequiredService<IConfiguration>()
             );
             
             await initializer.InitializeAsync();
