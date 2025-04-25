@@ -19,11 +19,15 @@ namespace EBISX_POS.API.Extensions
                 _configuration = configuration;
             }
 
-            private async Task<bool> CheckMySqlConnectionAsync(string connectionString)
+            private async Task<bool> CheckMySqlServerConnectionAsync(string connectionString)
             {
                 try
                 {
-                    using var connection = new MySqlConnection(connectionString);
+                    // Create a connection string without the database
+                    var builder = new MySqlConnectionStringBuilder(connectionString);
+                    builder.Database = null; // Remove database from connection string
+                    
+                    using var connection = new MySqlConnection(builder.ToString());
                     await connection.OpenAsync();
                     return true;
                 }
@@ -36,17 +40,11 @@ namespace EBISX_POS.API.Extensions
 
             private async Task CreateDatabaseIfNotExistsAsync(string connectionString, string databaseName)
             {
-                // Extract server connection string without database
+                // Create a connection string without the database
                 var builder = new MySqlConnectionStringBuilder(connectionString);
-                var serverConnectionString = new MySqlConnectionStringBuilder
-                {
-                    Server = builder.Server,
-                    UserID = builder.UserID,
-                    Password = builder.Password,
-                    Port = builder.Port
-                }.ToString();
+                builder.Database = null; // Remove database from connection string
 
-                using var connection = new MySqlConnection(serverConnectionString);
+                using var connection = new MySqlConnection(builder.ToString());
                 await connection.OpenAsync();
 
                 using var command = connection.CreateCommand();
@@ -78,8 +76,8 @@ namespace EBISX_POS.API.Extensions
                     var posConnectionString = _configuration.GetConnectionString("POSConnection");
                     var journalConnectionString = _configuration.GetConnectionString("JournalConnection");
 
-                    // Check MySQL server connection
-                    if (!await CheckMySqlConnectionAsync(posConnectionString))
+                    // Check MySQL server connection without database
+                    if (!await CheckMySqlServerConnectionAsync(posConnectionString))
                     {
                         _logger.LogError("Cannot connect to MySQL server. Please ensure MySQL server is running.");
                         return;
