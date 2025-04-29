@@ -23,9 +23,8 @@ namespace EBISX_POS.API.Extensions
             {
                 try
                 {
-                    // Create a connection string without the database
                     var builder = new MySqlConnectionStringBuilder(connectionString);
-                    builder.Database = null; // Remove database from connection string
+                    builder.Database = null;
                     
                     using var connection = new MySqlConnection(builder.ToString());
                     await connection.OpenAsync();
@@ -40,9 +39,8 @@ namespace EBISX_POS.API.Extensions
 
             private async Task CreateDatabaseIfNotExistsAsync(string connectionString, string databaseName)
             {
-                // Create a connection string without the database
                 var builder = new MySqlConnectionStringBuilder(connectionString);
-                builder.Database = null; // Remove database from connection string
+                builder.Database = null;
 
                 using var connection = new MySqlConnection(builder.ToString());
                 await connection.OpenAsync();
@@ -52,20 +50,53 @@ namespace EBISX_POS.API.Extensions
                 await command.ExecuteNonQueryAsync();
             }
 
-            private async Task<bool> TableExistsAsync(DbContext context, string tableName)
+            private async Task InitializeDatabaseAsync<TContext>(TContext context, string databaseName) where TContext : DbContext
             {
-                var connection = context.Database.GetDbConnection();
-                await connection.OpenAsync();
                 try
                 {
-                    using var command = connection.CreateCommand();
-                    command.CommandText = $"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '{tableName}'";
-                    var result = await command.ExecuteScalarAsync();
-                    return Convert.ToInt32(result) > 0;
+                    _logger.LogInformation($"Initializing {databaseName} database...");
+                    
+                    // Get pending migrations
+                    var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+                    var appliedMigrations = await context.Database.GetAppliedMigrationsAsync();
+                    
+                    if (!pendingMigrations.Any() && !appliedMigrations.Any())
+                    {
+                        // First time setup - no migrations exist
+                        _logger.LogInformation($"No migrations found for {databaseName}. Creating initial schema...");
+                        await context.Database.EnsureCreatedAsync();
+                        
+                        // Create the migrations history table manually
+                        await context.Database.ExecuteSqlRawAsync(@"
+                            CREATE TABLE IF NOT EXISTS `__EFMigrationsHistory` (
+                                `MigrationId` varchar(150) NOT NULL,
+                                `ProductVersion` varchar(32) NOT NULL,
+                                PRIMARY KEY (`MigrationId`)
+                            ) CHARACTER SET=utf8mb4;");
+                            
+                        // Insert the initial migration record
+                        await context.Database.ExecuteSqlRawAsync(@"
+                            INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
+                            VALUES ('InitialCreate', '8.0.2');");
+                    }
+                    else
+                    {
+                        // Apply any pending migrations
+                        if (pendingMigrations.Any())
+                        {
+                            _logger.LogInformation($"Applying {pendingMigrations.Count()} pending migrations for {databaseName}...");
+                            await context.Database.MigrateAsync();
+                        }
+                        else
+                        {
+                            _logger.LogInformation($"No pending migrations for {databaseName}.");
+                        }
+                    }
                 }
-                finally
+                catch (Exception ex)
                 {
-                    await connection.CloseAsync();
+                    _logger.LogError(ex, $"Error initializing {databaseName} database");
+                    throw;
                 }
             }
 
@@ -76,7 +107,7 @@ namespace EBISX_POS.API.Extensions
                     var posConnectionString = _configuration.GetConnectionString("POSConnection");
                     var journalConnectionString = _configuration.GetConnectionString("JournalConnection");
 
-                    // Check MySQL server connection without database
+                    // Check MySQL server connection
                     if (!await CheckMySqlServerConnectionAsync(posConnectionString))
                     {
                         _logger.LogError("Cannot connect to MySQL server. Please ensure MySQL server is running.");
@@ -90,68 +121,22 @@ namespace EBISX_POS.API.Extensions
                     var dataContext = _services.GetRequiredService<DataContext>();
                     var journalContext = _services.GetRequiredService<JournalContext>();
 
-                    // Check if database exists and can connect
-                    if (!await dataContext.Database.CanConnectAsync())
-                    {
-                        _logger.LogInformation("Creating POS database...");
-                        await dataContext.Database.EnsureCreatedAsync();
-                        //_logger.LogInformation("Seeding initial data for POS database...");
-                        //await SeedData.InitializeAsync(_services);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("POS database exists, checking for migrations...");
-                        await dataContext.Database.MigrateAsync();
-                        var pendingMigrations = await dataContext.Database.GetPendingMigrationsAsync();
-                        if (pendingMigrations.Any())
-                        {
-                            _logger.LogInformation("Applying pending migrations for POS database...");
-                        }
-                        else
-                        {
-                            _logger.LogInformation("No pending migrations for POS database.");
-                        }
-                    }
+                    // Initialize both databases
+                    await InitializeDatabaseAsync(dataContext, "POS");
+                    await InitializeDatabaseAsync(journalContext, "Journal");
 
-                    // Check if database exists and can connect
-                    if (!await journalContext.Database.CanConnectAsync())
-                    {
-                        _logger.LogInformation("Creating Journal database...");
-                        await journalContext.Database.EnsureCreatedAsync();
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Journal database exists, checking for migrations...");
-                        var pendingMigrations = await journalContext.Database.GetPendingMigrationsAsync();
-                        await journalContext.Database.MigrateAsync();
-                        if (pendingMigrations.Any())
-                        {
-                            _logger.LogInformation("Applying pending migrations for Journal database...");
-                        }
-                        else
-                        {
-                            _logger.LogInformation("No pending migrations for Journal database.");
-                        }
-                    }
-
-                    // Check for existing tables in Journal database
-                    var accountJournalExists = await TableExistsAsync(journalContext, "accountjournal");
-                    if (accountJournalExists)
-                    {
-                        _logger.LogInformation("Table 'accountjournal' already exists in Journal database.");
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Table 'accountjournal' does not exist, it will be created with migrations.");
-
-                        await journalContext.Database.MigrateAsync();
-                    }
+                    //// Check if we need to seed initial data
+                    //if (!await dataContext.User.AnyAsync())
+                    //{
+                    //    _logger.LogInformation("Seeding initial data for POS database...");
+                    //    await SeedData.InitializeAsync(_services);
+                    //    _logger.LogInformation("Initial data seeded successfully.");
+                    //}
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "An error occurred while initializing the database.");
-                    // Don't throw the exception, just log it
-                    // This allows the application to continue even if some tables already exist
+                    throw; // Re-throw to prevent application startup if database initialization fails
                 }
             }
         }
