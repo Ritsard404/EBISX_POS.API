@@ -53,11 +53,11 @@ namespace EBISX_POS.API.Controllers
         [HttpPost]
         public async Task<IActionResult> LogIn(LogInDTO logInDTO)
         {
-            var (success, cashierEmail, cashierName) = await _auth.LogIn(logInDTO);
+            var (success, isManager, email, name) = await _auth.LogIn(logInDTO);
             if (!success)
                 return Unauthorized("Invalid Credential!");
 
-            return Ok(new { cashierEmail, cashierName });
+            return Ok(new { isManager, email, name });
         }
 
         [HttpPut]

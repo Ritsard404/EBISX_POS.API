@@ -151,32 +151,84 @@ namespace EBISX_POS.API.Services.Repositories
             }
         }
 
-        public async Task<(bool, string, string)> LogIn(LogInDTO logInDTO)
+        public async Task<(bool success, bool isManager, string email, string name)> LogIn(LogInDTO dto)
         {
-            var manager = await _dataContext.User
-                .Where(m => m.UserEmail == logInDTO.ManagerEmail && m.UserRole != "Cashier" && m.IsActive)
-                .FirstOrDefaultAsync();
+            // Try to look up a manager if one was supplied
+            User? manager = null;
+            if (!string.IsNullOrWhiteSpace(dto.ManagerEmail))
+            {
+                manager = await _dataContext.User
+                    .FirstOrDefaultAsync(u =>
+                        u.UserEmail == dto.ManagerEmail &&
+                        u.UserRole != "Cashier" &&
+                        u.IsActive);
+            }
 
-            var cashier = await _dataContext.User
-                .Where(m => m.UserEmail == logInDTO.CashierEmail && m.UserRole == "Cashier" && m.IsActive)
-                .FirstOrDefaultAsync();
+            // Try to look up a cashier if one was supplied
+            User? cashier = null;
+            if (!string.IsNullOrWhiteSpace(dto.CashierEmail))
+            {
+                cashier = await _dataContext.User
+                    .FirstOrDefaultAsync(u =>
+                        u.UserEmail == dto.CashierEmail &&
+                        u.UserRole == "Cashier" &&
+                        u.IsActive);
+            }
 
-            if (manager == null || cashier == null)
-                return (false, "Invalid Credential!", "");
+            // If neither found, fail
+            if (manager == null && cashier == null)
+                return (false, false, "", "");
 
-            // Create a new Timestamp record for the cashier's login ("time in")
+            // --- Manager-only login (no cashierEmail supplied) ---
+            if (cashier == null)
+            {
+                // Log the manager login
+                _dataContext.UserLog.Add(new UserLog
+                {
+                    Manager = manager!,          // we know manager != null here
+                    Action = "Manager Login",
+                });
+
+                await _dataContext.SaveChangesAsync();
+
+                return (
+                    success: true,
+                    isManager: true,
+                    email: manager!.UserEmail,
+                    name: $"{manager!.UserFName} {manager!.UserLName}"
+                );
+            }
+
+            // --- Cashier login (may have manager approval) ---
             var timestamp = new Timestamp
             {
-                TsIn = DateTimeOffset.Now, // Set the time-in to now
-                Cashier = cashier,
-                ManagerIn = manager      // Manager who authorized the login
+                TsIn = DateTimeOffset.Now,
+                Cashier = cashier,    // non-null
+                ManagerIn = manager      // may be null if self-approved
             };
-
             _dataContext.Timestamp.Add(timestamp);
+
+            // Optionally log the manager’s approval
+            if (manager != null)
+            {
+                _dataContext.UserLog.Add(new UserLog
+                {
+                    Manager = manager,
+                    Timestamp = timestamp,
+                    Action = "Approved Cashier Login"
+                });
+            }
+
             await _dataContext.SaveChangesAsync();
 
-            return (true, cashier.UserEmail, cashier.UserFName + " " + cashier.UserLName);
+            return (
+                success: true,
+                isManager: false,
+                email: cashier.UserEmail,
+                name: $"{cashier.UserFName} {cashier.UserLName}"
+            );
         }
+
 
         public async Task<(bool, string)> LogOut(LogInDTO logOutDTO)
         {

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace EBISX_POS.API.Migrations.Journal
 {
     /// <inheritdoc />
-    public partial class EBISX_JOURNAL : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

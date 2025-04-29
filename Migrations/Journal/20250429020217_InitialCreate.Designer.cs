@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EBISX_POS.API.Migrations.Journal
 {
     [DbContext(typeof(JournalContext))]
-    [Migration("20250407084321_EBISX_JOURNAL")]
-    partial class EBISX_JOURNAL
+    [Migration("20250429020217_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

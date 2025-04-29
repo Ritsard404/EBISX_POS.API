@@ -211,45 +211,6 @@ namespace EBISX_POS.API.Migrations
                     b.ToTable("Item");
                 });
 
-            modelBuilder.Entity("EBISX_POS.API.Models.ManagerLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("ManagerUserEmail")
-                        .IsRequired()
-                        .HasColumnType("varchar(255)");
-
-                    b.Property<long?>("OrderId")
-                        .HasColumnType("bigint");
-
-                    b.Property<int?>("TimestampId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("WithdrawAmount")
-                        .HasColumnType("decimal(65,30)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ManagerUserEmail");
-
-                    b.HasIndex("OrderId");
-
-                    b.HasIndex("TimestampId");
-
-                    b.ToTable("ManagerLog");
-                });
-
             modelBuilder.Entity("EBISX_POS.API.Models.Menu", b =>
                 {
                     b.Property<int>("Id")
@@ -538,6 +499,49 @@ namespace EBISX_POS.API.Migrations
                     b.ToTable("User");
                 });
 
+            modelBuilder.Entity("EBISX_POS.API.Models.UserLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("CashierUserEmail")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ManagerUserEmail")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<long?>("OrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("TimestampId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("WithdrawAmount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashierUserEmail");
+
+                    b.HasIndex("ManagerUserEmail");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("TimestampId");
+
+                    b.ToTable("UserLog");
+                });
+
             modelBuilder.Entity("EBISX_POS.API.Models.AlternativePayments", b =>
                 {
                     b.HasOne("EBISX_POS.API.Models.Order", "Order")
@@ -597,27 +601,6 @@ namespace EBISX_POS.API.Migrations
                     b.Navigation("Menu");
 
                     b.Navigation("Order");
-                });
-
-            modelBuilder.Entity("EBISX_POS.API.Models.ManagerLog", b =>
-                {
-                    b.HasOne("EBISX_POS.API.Models.User", "Manager")
-                        .WithMany()
-                        .HasForeignKey("ManagerUserEmail")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("EBISX_POS.API.Models.Order", null)
-                        .WithMany("ManagerLog")
-                        .HasForeignKey("OrderId");
-
-                    b.HasOne("EBISX_POS.API.Models.Timestamp", "Timestamp")
-                        .WithMany("ManagerLog")
-                        .HasForeignKey("TimestampId");
-
-                    b.Navigation("Manager");
-
-                    b.Navigation("Timestamp");
                 });
 
             modelBuilder.Entity("EBISX_POS.API.Models.Menu", b =>
@@ -689,6 +672,31 @@ namespace EBISX_POS.API.Migrations
                     b.Navigation("ManagerOut");
                 });
 
+            modelBuilder.Entity("EBISX_POS.API.Models.UserLog", b =>
+                {
+                    b.HasOne("EBISX_POS.API.Models.User", "Cashier")
+                        .WithMany()
+                        .HasForeignKey("CashierUserEmail");
+
+                    b.HasOne("EBISX_POS.API.Models.User", "Manager")
+                        .WithMany()
+                        .HasForeignKey("ManagerUserEmail");
+
+                    b.HasOne("EBISX_POS.API.Models.Order", null)
+                        .WithMany("UserLog")
+                        .HasForeignKey("OrderId");
+
+                    b.HasOne("EBISX_POS.API.Models.Timestamp", "Timestamp")
+                        .WithMany("ManagerLog")
+                        .HasForeignKey("TimestampId");
+
+                    b.Navigation("Cashier");
+
+                    b.Navigation("Manager");
+
+                    b.Navigation("Timestamp");
+                });
+
             modelBuilder.Entity("EBISX_POS.API.Models.CouponPromo", b =>
                 {
                     b.Navigation("CouponMenus");
@@ -702,7 +710,7 @@ namespace EBISX_POS.API.Migrations
 
                     b.Navigation("Items");
 
-                    b.Navigation("ManagerLog");
+                    b.Navigation("UserLog");
                 });
 
             modelBuilder.Entity("EBISX_POS.API.Models.Timestamp", b =>

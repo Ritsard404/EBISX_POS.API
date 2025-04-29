@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace EBISX_POS.API.Migrations
 {
     /// <inheritdoc />
-    public partial class ebisx_pos : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -375,13 +375,15 @@ namespace EBISX_POS.API.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "ManagerLog",
+                name: "UserLog",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
                     TimestampId = table.Column<int>(type: "int", nullable: true),
-                    ManagerUserEmail = table.Column<string>(type: "varchar(255)", nullable: false)
+                    CashierUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ManagerUserEmail = table.Column<string>(type: "varchar(255)", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Action = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -391,23 +393,27 @@ namespace EBISX_POS.API.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ManagerLog", x => x.Id);
+                    table.PrimaryKey("PK_UserLog", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ManagerLog_Order_OrderId",
+                        name: "FK_UserLog_Order_OrderId",
                         column: x => x.OrderId,
                         principalTable: "Order",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_ManagerLog_Timestamp_TimestampId",
+                        name: "FK_UserLog_Timestamp_TimestampId",
                         column: x => x.TimestampId,
                         principalTable: "Timestamp",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_ManagerLog_User_ManagerUserEmail",
+                        name: "FK_UserLog_User_CashierUserEmail",
+                        column: x => x.CashierUserEmail,
+                        principalTable: "User",
+                        principalColumn: "UserEmail");
+                    table.ForeignKey(
+                        name: "FK_UserLog_User_ManagerUserEmail",
                         column: x => x.ManagerUserEmail,
                         principalTable: "User",
-                        principalColumn: "UserEmail",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "UserEmail");
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -450,21 +456,6 @@ namespace EBISX_POS.API.Migrations
                 name: "IX_Item_OrderId",
                 table: "Item",
                 column: "OrderId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ManagerLog_ManagerUserEmail",
-                table: "ManagerLog",
-                column: "ManagerUserEmail");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ManagerLog_OrderId",
-                table: "ManagerLog",
-                column: "OrderId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ManagerLog_TimestampId",
-                table: "ManagerLog",
-                column: "TimestampId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Menu_AddOnTypeId",
@@ -511,6 +502,26 @@ namespace EBISX_POS.API.Migrations
                 table: "Timestamp",
                 column: "ManagerOutUserEmail");
 
+            migrationBuilder.CreateIndex(
+                name: "IX_UserLog_CashierUserEmail",
+                table: "UserLog",
+                column: "CashierUserEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserLog_ManagerUserEmail",
+                table: "UserLog",
+                column: "ManagerUserEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserLog_OrderId",
+                table: "UserLog",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserLog_TimestampId",
+                table: "UserLog",
+                column: "TimestampId");
+
             migrationBuilder.AddForeignKey(
                 name: "FK_AlternativePayments_Order_OrderId",
                 table: "AlternativePayments",
@@ -541,10 +552,10 @@ namespace EBISX_POS.API.Migrations
                 name: "Item");
 
             migrationBuilder.DropTable(
-                name: "ManagerLog");
+                name: "PosTerminalInfo");
 
             migrationBuilder.DropTable(
-                name: "PosTerminalInfo");
+                name: "UserLog");
 
             migrationBuilder.DropTable(
                 name: "SaleType");

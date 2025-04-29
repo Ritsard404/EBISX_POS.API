@@ -101,23 +101,16 @@ namespace EBISX_POS.API.Extensions
                     else
                     {
                         _logger.LogInformation("POS database exists, checking for migrations...");
+                        await dataContext.Database.MigrateAsync();
                         var pendingMigrations = await dataContext.Database.GetPendingMigrationsAsync();
                         if (pendingMigrations.Any())
                         {
                             _logger.LogInformation("Applying pending migrations for POS database...");
-                            await dataContext.Database.MigrateAsync();
                         }
                         else
                         {
                             _logger.LogInformation("No pending migrations for POS database.");
                         }
-
-                        // Check if we need to seed data
-                        //if (!await dataContext.User.AnyAsync())
-                        //{
-                        //    _logger.LogInformation("No users found, seeding initial data...");
-                        //    await SeedData.InitializeAsync(_services);
-                        //}
                     }
 
                     // Check if database exists and can connect
@@ -130,10 +123,10 @@ namespace EBISX_POS.API.Extensions
                     {
                         _logger.LogInformation("Journal database exists, checking for migrations...");
                         var pendingMigrations = await journalContext.Database.GetPendingMigrationsAsync();
+                        await journalContext.Database.MigrateAsync();
                         if (pendingMigrations.Any())
                         {
                             _logger.LogInformation("Applying pending migrations for Journal database...");
-                            await journalContext.Database.MigrateAsync();
                         }
                         else
                         {
@@ -150,6 +143,8 @@ namespace EBISX_POS.API.Extensions
                     else
                     {
                         _logger.LogInformation("Table 'accountjournal' does not exist, it will be created with migrations.");
+
+                        await journalContext.Database.MigrateAsync();
                     }
                 }
                 catch (Exception ex)

@@ -4,7 +4,7 @@ namespace EBISX_POS.API.Services.Interfaces
 {
     public interface IAuth
     {
-        Task<(bool, string, string)> LogIn(LogInDTO logInDTO);
+        Task<(bool success, bool isManager, string email, string name)> LogIn(LogInDTO logInDTO);
         Task<(bool, string)> LogOut(LogInDTO logOutDTO);
         Task<(bool, string, string)> HasPendingOrder();
         Task<(bool, string)> CheckData();
