@@ -38,9 +38,19 @@ namespace EBISX_POS.API.Services.Repositories
                         o.CashTendered!.Value - o.ChangeAmount!.Value
                     );
 
+            var totalWithdrawn = await _dataContext.UserLog
+                .Where(u => u.Timestamp != null && u.Timestamp.Id == timestamp.Id && u.Action == "Cash Withdrawal")
+                .SumAsync(u => u.WithdrawAmount);
+
             var phCulture = new CultureInfo("en-PH");
+
             string cashInDrawerText = timestamp.CashInDrawerAmount.Value.ToString("C", phCulture);
-            string currentCashDrawerText = (timestamp.CashInDrawerAmount.Value + totalCashInDrawer).ToString("C", phCulture);
+
+            string currentCashDrawerText =
+                (timestamp.CashInDrawerAmount.Value
+                + totalCashInDrawer
+                - totalWithdrawn
+                ).ToString("C", phCulture);
 
             return (cashInDrawerText, currentCashDrawerText);
         }
@@ -647,7 +657,7 @@ namespace EBISX_POS.API.Services.Repositories
             var userLogs = await userLogsQuery
                 .Select(m => new UserActionLogDTO
                 {
-                    Name =  m.Manager.UserFName + " " + m.Manager.UserLName,
+                    Name = m.Manager.UserFName + " " + m.Manager.UserLName,
                     CashierName = m.Cashier.UserFName + " " + m.Cashier.UserLName,
                     Action = m.Action,
                     ManagerEmail = m.Manager.UserEmail,
