@@ -21,6 +21,10 @@ namespace EBISX_POS.API.Models
         public required string VatTinNumber { get; set; } // VAT (Value Added Tax) TIN (Tax Identification Number) of the business.
 
         public int ResetCounterNo { get; set; } = 0;
+        public int ResetCounterTrainNo { get; set; } = 0;
         public int ZCounterNo { get; set; } = 0;
+        public int ZCounterTrainNo { get; set; } = 0;
+
+        public bool IsTrainMode { get; set; } = false;
     }
 }

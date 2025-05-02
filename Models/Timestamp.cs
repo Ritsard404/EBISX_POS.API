@@ -18,6 +18,7 @@ namespace EBISX_POS.API.Models
         public decimal? CashInDrawerAmount { get; set; } = 0;
         public decimal? CashOutDrawerAmount { get; set; } = 0;
         //public decimal? CashWithdrawAmount { get; set; } = 0;
+        public bool IsTrainMode { get; set; } = false;
         public ICollection<UserLog> ManagerLog { get; set; }
             = new List<UserLog>(); 
         

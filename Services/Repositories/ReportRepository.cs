@@ -320,13 +320,17 @@ namespace EBISX_POS.API.Services.Repositories
             var defaultDecimal = 0m;
             var defaultDate = new DateTime(2000, 1, 1);
 
+            bool isTrainMode = await _dataContext.PosTerminalInfo
+                .Select(o => o.IsTrainMode)
+                .FirstOrDefaultAsync();
+
             // Safely fetch data with null checks
             var orders = await _dataContext.Order
                 .Include(o => o.Cashier)
                 .Include(o => o.Items)
                 .Include(o => o.AlternativePayments)
                     .ThenInclude(ap => ap.SaleType)
-                .Where(o => !o.IsRead)
+                .Where(o => !o.IsRead && o.IsTrainMode == isTrainMode)
                 .ToListAsync() ?? new List<Order>();
 
             var posInfo = await _dataContext.PosTerminalInfo.FirstOrDefaultAsync();
@@ -339,7 +343,7 @@ namespace EBISX_POS.API.Services.Repositories
                 .Include(t => t.Cashier)
                 .Include(t => t.ManagerLog)
                 .OrderBy(t => t.Id)
-                .LastOrDefaultAsync();
+                .LastOrDefaultAsync(o => o.IsTrainMode == isTrainMode);
 
             // Handle empty orders scenario
             var firstOrder = orders.FirstOrDefault();
@@ -436,8 +440,12 @@ namespace EBISX_POS.API.Services.Repositories
             var defaultDate = new DateTime(2000, 1, 1);
             var today = DateTime.Today;
 
+            bool isTrainMode = await _dataContext.PosTerminalInfo
+                .Select(o => o.IsTrainMode)
+                .FirstOrDefaultAsync();
+
             var orders = await _dataContext.Order
-                .Where(o => !o.IsTrainMode)
+                .Where(o => o.IsTrainMode == isTrainMode)
                 .Include(o => o.Items)
                 .Include(o => o.AlternativePayments)
                     .ThenInclude(ap => ap.SaleType)
@@ -445,6 +453,7 @@ namespace EBISX_POS.API.Services.Repositories
 
             // Initialize empty collections to prevent null references
             var allTimestamps = await _dataContext.Timestamp
+                .Where(t => t.IsTrainMode == isTrainMode)
                 .Include(t => t.Cashier)
                 .Include(t => t.ManagerLog)
                 .ToListAsync() ?? new List<Timestamp>();
@@ -570,8 +579,8 @@ namespace EBISX_POS.API.Services.Repositories
                 EndingReturn = GetOrderNumber(returnOrders.Max(o => o?.Id)),
 
                 // Always zero when empty
-                ResetCounter = posInfo.ResetCounterNo.ToString(),
-                ZCounter = posInfo.ZCounterNo.ToString(),
+                ResetCounter = isTrainMode ? posInfo.ResetCounterTrainNo.ToString() : posInfo.ResetCounterNo.ToString(),
+                ZCounter = isTrainMode ? posInfo.ZCounterTrainNo.ToString() : posInfo.ZCounterNo.ToString(),
 
                 // Financial summaries
                 PresentAccumulatedSales = presentAccumulatedSales.ToString("C", pesoCulture),
@@ -627,7 +636,16 @@ namespace EBISX_POS.API.Services.Repositories
                 ShortOver = shortOver.ToString("C", pesoCulture)
             };
 
-            posInfo.ZCounterNo += 1;
+            if (isTrainMode)
+            {
+                posInfo.ZCounterTrainNo += 1;
+            }
+            else
+            {
+
+
+                posInfo.ZCounterNo += 1;
+            }
             await _dataContext.SaveChangesAsync();
 
             return dto;

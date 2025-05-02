@@ -8,6 +8,8 @@ namespace EBISX_POS.API.Models
         [Key]
         public long Id { get; set; }
 
+        public required long InvoiceNumber { get; set; }
+
         public required string OrderType { get; set; }
         public required decimal TotalAmount { get; set; }
         public decimal? CashTendered { get; set; }

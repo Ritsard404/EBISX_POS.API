@@ -84,6 +84,13 @@ namespace EBISX_POS.API.Services.Repositories
                     return (false, "Order not found");
                 }
 
+                // Skip journal entries for training mode
+                if (order.IsTrainMode)
+                {
+                    _logger.LogInformation("Skipping journal entries for training mode order {OrderId}", orderId);
+                    return (true, "Training mode order - no journal entries created");
+                }
+
                 if (order.Items == null || !order.Items.Any())
                 {
                     _logger.LogWarning("Order {OrderId} has no items.", orderId);
@@ -102,7 +109,7 @@ namespace EBISX_POS.API.Services.Repositories
 
                     var journal = new AccountJournal
                     {
-                        EntryNo = order.Id,
+                        EntryNo = order.InvoiceNumber,
                         EntryLineNo = 3, // Adjust if needed
                         Status = item.IsVoid ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
                         EntryName = item.EntryId ?? "",
@@ -115,8 +122,8 @@ namespace EBISX_POS.API.Services.Repositories
 
                     journals.Add(journal);
 
-                    _logger.LogInformation("Prepared journal entry: AccountName={AccountName}, Description={Description}, QtyOut={Qty}, Price={Price}",
-                        journal.AccountName, journal.Description, journal.QtyOut, journal.Price);
+                    _logger.LogInformation("Prepared journal entry: AccountName={AccountName}, Description={Description}, QtyOut={Qty}, Price={Price}, EntryNo={EntryNo}",
+                        journal.AccountName, journal.Description, journal.QtyOut, journal.Price, journal.EntryNo);
                 }
 
                 if (!journals.Any())
@@ -152,12 +159,27 @@ namespace EBISX_POS.API.Services.Repositories
 
             try
             {
+                // Get the order to check training mode and invoice number
+                var order = await _dataContext.Order
+                    .FirstOrDefaultAsync(o => o.Id == journalDTO.OrderId);
+
+                if (order == null)
+                {
+                    return (false, "Order not found.");
+                }
+
+                // Skip journal entries for training mode
+                if (order.IsTrainMode)
+                {
+                    _logger.LogInformation("Skipping PWD/SC journal entries for training mode order {OrderId}", order.Id);
+                    return (true, "Training mode order - no journal entries created");
+                }
+
                 // Prepare a list of valid journal entries
                 var journals = new List<AccountJournal>();
 
                 foreach (var pwdOrSc in journalDTO.PwdScInfo)
                 {
-                    // Validate that AccountName (pwdOrSc.Name) is not null or empty
                     if (string.IsNullOrWhiteSpace(pwdOrSc.Name))
                     {
                         _logger.LogError("Invalid journal entry: AccountName is null or empty. Skipping entry with Reference {Reference}.", pwdOrSc.OscaNum);
@@ -166,20 +188,19 @@ namespace EBISX_POS.API.Services.Repositories
 
                     var journal = new AccountJournal
                     {
-                        EntryNo = journalDTO.OrderId,
-                        EntryLineNo = 5, // Adjust as needed
+                        EntryNo = order.InvoiceNumber,
+                        EntryLineNo = 5,
                         Status = journalDTO.Status ?? "Posted",
                         AccountName = pwdOrSc.Name,
                         Reference = pwdOrSc.OscaNum,
                         EntryDate = journalDTO.EntryDate,
-                        EntryName = journalDTO.IsPWD ? "PWD" : "Senior",
-                        // Optionally, set other properties as needed.
+                        EntryName = journalDTO.IsPWD ? "PWD" : "Senior"
                     };
 
                     journals.Add(journal);
 
-                    _logger.LogInformation("Prepared AccountJournal entry: AccountName={AccountName}, Reference={Reference}, EntryDate={EntryDate}",
-                        journal.AccountName, journal.Reference, journal.EntryDate);
+                    _logger.LogInformation("Prepared AccountJournal entry: AccountName={AccountName}, Reference={Reference}, EntryDate={EntryDate}, EntryNo={EntryNo}",
+                        journal.AccountName, journal.Reference, journal.EntryDate, journal.EntryNo);
                 }
 
                 if (!journals.Any())
@@ -187,7 +208,6 @@ namespace EBISX_POS.API.Services.Repositories
                     return (false, "No valid journal entries to add. Please check your input.");
                 }
 
-                // Use bulk add to optimize database operations.
                 await _journal.AccountJournal.AddRangeAsync(journals);
                 await _journal.SaveChangesAsync();
 
@@ -218,6 +238,13 @@ namespace EBISX_POS.API.Services.Repositories
             {
                 _logger.LogWarning("Order with ID {OrderId} not found.", orderId);
                 return (false, "Order not found.");
+            }
+
+            // Skip journal entries for training mode
+            if (order.IsTrainMode)
+            {
+                _logger.LogInformation("Skipping PWD/SC journal entries for training mode order {OrderId}", orderId);
+                return (true, "Training mode order - no journal entries created");
             }
 
             // 2) Guard: need both names and OSCAs
@@ -259,20 +286,20 @@ namespace EBISX_POS.API.Services.Repositories
 
                 var journal = new AccountJournal
                 {
-                    EntryNo = order.Id,
+                    EntryNo = order.InvoiceNumber,
                     EntryLineNo = lineNo++,
                     Status = order.IsCancelled ? "Unposted" : "Posted",
                     AccountName = name,
                     Reference = osca,
                     EntryName = order.DiscountType ?? "",
-                    EntryDate = order.CreatedAt.DateTime   // assuming CreatedAt is DateTime
+                    EntryDate = order.CreatedAt.DateTime
                 };
 
                 journals.Add(journal);
 
                 _logger.LogInformation(
-                    "Prepared PWD/SC journal #{LineNo}: Name={Name}, OSCA={Osca}",
-                    journal.EntryLineNo, name, osca);
+                    "Prepared PWD/SC journal #{LineNo}: Name={Name}, OSCA={Osca}, EntryNo={EntryNo}",
+                    journal.EntryLineNo, name, osca, journal.EntryNo);
             }
 
             // 6) Persist
@@ -320,6 +347,13 @@ namespace EBISX_POS.API.Services.Repositories
                 return (false, "Order not found");
             }
 
+            // Skip journal entries for training mode
+            if (order.IsTrainMode)
+            {
+                _logger.LogInformation("Skipping tenders journal entries for training mode order {OrderId}", orderId);
+                return (true, "Training mode order - no journal entries created");
+            }
+
             var journals = new List<AccountJournal>();
 
             // 1) Record the cash tendered on the order itself
@@ -327,27 +361,26 @@ namespace EBISX_POS.API.Services.Repositories
             {
                 journals.Add(new AccountJournal
                 {
-                    EntryNo = order.Id,
+                    EntryNo = order.InvoiceNumber,
                     EntryLineNo = 0,
                     Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
                     EntryName = "Cash Tendered",
-                    AccountName = "Cash",                   // or pull from a config/account‑mapping
+                    AccountName = "Cash",
                     Description = "Cash Tendered",
                     Debit = order.IsReturned ? 0 : Convert.ToDouble(order.CashTendered),
                     Credit = order.IsReturned ? Convert.ToDouble(order.CashTendered) : 0,
-                    EntryDate = order.CreatedAt.DateTime           // assuming CreatedAt is DateTime
+                    EntryDate = order.CreatedAt.DateTime
                 });
             }
 
-            // 2) Record any alternative payments (card, gift‑card, etc.)
+            // 2) Record any alternative payments (card, gift-card, etc.)
             if (order.AlternativePayments != null)
             {
                 foreach (var tender in order.AlternativePayments)
                 {
-
                     var journal = new AccountJournal
                     {
-                        EntryNo = order.Id,
+                        EntryNo = order.InvoiceNumber,
                         EntryLineNo = 0,
                         Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
                         EntryName = tender.SaleType.Name,
@@ -361,9 +394,8 @@ namespace EBISX_POS.API.Services.Repositories
 
                     journals.Add(journal);
 
-                    _logger.LogInformation(
-                        "Prepared tender journal #{LineNo}: Account={Account}, Credit={Credit}",
-                        journal.EntryLineNo, journal.AccountName, journal.Credit);
+                    _logger.LogInformation("Prepared tender journal #{LineNo}: Account={Account}, Credit={Credit}, EntryNo={EntryNo}",
+                        journal.EntryLineNo, journal.AccountName, journal.Credit, journal.EntryNo);
                 }
             }
 
@@ -378,19 +410,12 @@ namespace EBISX_POS.API.Services.Repositories
                 _journal.AccountJournal.AddRange(journals);
                 await _journal.SaveChangesAsync();
 
-                _logger.LogInformation(
-                    "Successfully added {Count} payment journal entries for Order {OrderId}.",
-                    journals.Count, orderId);
-
+                _logger.LogInformation("Successfully added {Count} payment journal entries for Order {OrderId}.", journals.Count, orderId);
                 return (true, $"{journals.Count} payment entries added.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error saving payment journal entries for Order {OrderId}.",
-                    orderId);
-
+                _logger.LogError(ex, "Error saving payment journal entries for Order {OrderId}.", orderId);
                 return (false, $"An error occurred: {ex.Message}");
             }
         }
@@ -415,6 +440,13 @@ namespace EBISX_POS.API.Services.Repositories
                 return (false, "Order not found.");
             }
 
+            // Skip journal entries for training mode
+            if (order.IsTrainMode)
+            {
+                _logger.LogInformation("Skipping totals journal entries for training mode order {OrderId}", orderId);
+                return (true, "Training mode order - no journal entries created");
+            }
+
             var journals = new List<AccountJournal>();
 
             // 1) Discount line (EntryLineNo = 9)
@@ -426,7 +458,7 @@ namespace EBISX_POS.API.Services.Repositories
 
                 journals.Add(new AccountJournal
                 {
-                    EntryNo = order.Id,
+                    EntryNo = order.InvoiceNumber,
                     EntryLineNo = 10,
                     EntryName = "Discount Amount",
                     Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
@@ -434,49 +466,46 @@ namespace EBISX_POS.API.Services.Repositories
                     Description = "Discount",
                     Debit = order.IsReturned ? 0 : Convert.ToDouble(order.DiscountAmount),
                     Credit = order.IsReturned ? Convert.ToDouble(order.DiscountAmount) : 0,
-                    EntryDate = order.CreatedAt.DateTime    // assuming CreatedAt is DateTime
+                    EntryDate = order.CreatedAt.DateTime
                 });
 
-                _logger.LogInformation(
-                    "Prepared discount journal (Line 9): Account={Account}, Debit={Amt}",
-                    discountAccount, order.DiscountAmount);
+                _logger.LogInformation("Prepared discount journal (Line 9): Account={Account}, Debit={Amt}, EntryNo={EntryNo}",
+                    discountAccount, order.DiscountAmount, order.InvoiceNumber);
             }
 
             // 2) Total line (EntryLineNo = 10)
             journals.Add(new AccountJournal
             {
-                EntryNo = order.Id,
+                EntryNo = order.InvoiceNumber,
                 EntryLineNo = 10,
                 EntryName = "Total Amount",
                 Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
-                AccountName = "Sales",           // change to your revenue GL account
+                AccountName = "Sales",
                 Description = "Order Total",
                 Debit = order.IsReturned ? 0 : Convert.ToDouble(order.TotalAmount),
                 Credit = order.IsReturned ? Convert.ToDouble(order.TotalAmount) : 0,
                 EntryDate = order.CreatedAt.DateTime
             });
 
-
             journals.Add(new AccountJournal
             {
-                EntryNo = order.Id,
+                EntryNo = order.InvoiceNumber,
                 EntryLineNo = 10,
                 EntryName = "VAT Amount",
                 Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
-                AccountName = "VAT",           // change to your revenue GL account
+                AccountName = "VAT",
                 Description = "Order VAT",
                 Vatable = Convert.ToDouble(order.VatAmount),
                 EntryDate = order.CreatedAt.DateTime
             });
 
-
             journals.Add(new AccountJournal
             {
-                EntryNo = order.Id,
+                EntryNo = order.InvoiceNumber,
                 EntryLineNo = 10,
                 EntryName = "VAT Exempt Amount",
                 Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
-                AccountName = "VAT Exempt",           // change to your revenue GL account
+                AccountName = "VAT Exempt",
                 Description = "Order VAT Exempt",
                 Vatable = Convert.ToDouble(order.VatExempt),
                 EntryDate = order.CreatedAt.DateTime
@@ -484,19 +513,18 @@ namespace EBISX_POS.API.Services.Repositories
 
             journals.Add(new AccountJournal
             {
-                EntryNo = order.Id,
+                EntryNo = order.InvoiceNumber,
                 EntryLineNo = 10,
                 EntryName = "Sub Total",
                 Status = order.IsCancelled ? "Unposted" : order.IsReturned ? "Returned" : "Posted",
-                AccountName = "SubTotalt",           // change to your revenue GL account
+                AccountName = "SubTotal",
                 Description = "Order SubTotal",
                 SubTotal = Convert.ToDouble(order.DueAmount),
                 EntryDate = order.CreatedAt.DateTime
             });
 
-            _logger.LogInformation(
-                "Prepared total journal (Line 10): Account=Sales, Credit={Amt}",
-                order.TotalAmount);
+            _logger.LogInformation("Prepared total journal (Line 10): Account=Sales, Credit={Amt}, EntryNo={EntryNo}",
+                order.TotalAmount, order.InvoiceNumber);
 
             if (!journals.Any())
             {
@@ -509,19 +537,12 @@ namespace EBISX_POS.API.Services.Repositories
                 _journal.AccountJournal.AddRange(journals);
                 await _journal.SaveChangesAsync();
 
-                _logger.LogInformation(
-                    "Successfully added {Count} totals journal entries for Order {OrderId}.",
-                    journals.Count, orderId);
-
+                _logger.LogInformation("Successfully added {Count} totals journal entries for Order {OrderId}.", journals.Count, orderId);
                 return (true, $"{journals.Count} totals entries added.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error saving totals journal entries for Order {OrderId}.",
-                    orderId);
-
+                _logger.LogError(ex, "Error saving totals journal entries for Order {OrderId}.", orderId);
                 return (false, $"An error occurred: {ex.Message}");
             }
         }
@@ -530,6 +551,10 @@ namespace EBISX_POS.API.Services.Repositories
         {
             try
             {
+                bool isTrainMode = await _dataContext.PosTerminalInfo
+                    .Select(o => o.IsTrainMode)
+                    .FirstOrDefaultAsync();
+
                 var posInfo = await _dataContext.PosTerminalInfo.FirstOrDefaultAsync() ?? new PosTerminalInfo
                 {
                     RegisteredName = "N/A",
@@ -544,17 +569,17 @@ namespace EBISX_POS.API.Services.Repositories
                     ValidUntil = DateTime.Now
                 };
 
-                var resetId = posInfo.ResetCounterNo;
+                var resetId = isTrainMode ? posInfo.ResetCounterTrainNo : posInfo.ResetCounterNo;
                 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 var backupDir = "C:\\Backups"; // Make sure this path exists and is writable
 
-                if(Directory.Exists(backupDir) == false)
+                if (Directory.Exists(backupDir) == false)
                     Directory.CreateDirectory(backupDir);
 
 
                 // Step 1: Export to .sql files
-                await DumpTableToFile("Order", Path.Combine(backupDir, $"Order_Backup_{resetId}_{timestamp}.sql"));
-                await DumpTableToFile("AccountJournal", Path.Combine(backupDir, $"AccountJournal_Backup_{resetId}_{timestamp}.sql"));
+                await DumpTableToFile("Order", Path.Combine(backupDir, $"Order_Backup_{resetId}_{timestamp}{(isTrainMode ? "_Train" : "")}.sql"));
+                await DumpTableToFile("AccountJournal", Path.Combine(backupDir, $"AccountJournal_Backup_{resetId}_{timestamp}{(isTrainMode ? "_Train" : "")}.sql"));
 
                 // Step 2: Create backup tables in MySQL
                 var orderBackupTable = $"Order_Backup_{resetId}";
@@ -590,7 +615,14 @@ namespace EBISX_POS.API.Services.Repositories
                 await _journal.Database.ExecuteSqlRawAsync(truncateJournalSql);
 
                 // Step 4: Increment the ResetCounterNo
-                posInfo.ResetCounterNo += 1;
+                if (isTrainMode)
+                {
+                    posInfo.ResetCounterTrainNo += 1;
+                }
+                else
+                {
+                    posInfo.ResetCounterNo += 1;
+                }
                 await _dataContext.SaveChangesAsync();
 
                 return (true, "Order and journal tables backed up, exported, and truncated successfully.");

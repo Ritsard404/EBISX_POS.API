@@ -16,5 +16,6 @@
         public required string VatTinNumber { get; set; } // VAT (Value Added Tax) TIN (Tax Identification Number) of the business.
 
         public required string InvoiceDate { get; set; }
+        public required bool IsTrainMode { get; set; }
     }
 }

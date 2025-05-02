@@ -67,9 +67,9 @@ namespace EBISX_POS.API.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> RefundOrder(string managerEmail, long orderId)
+        public async Task<IActionResult> RefundOrder(string managerEmail, long invoiceNumber)
         {
-            var (success, message) = await _order.RefundOrder(managerEmail, orderId);
+            var (success, message) = await _order.RefundOrder(managerEmail, invoiceNumber);
             if (success)
             {
                 return Ok(message);

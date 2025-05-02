@@ -22,18 +22,5 @@ namespace EBISX_POS.API.Data
         public DbSet<AlternativePayments> AlternativePayments { get; set; }
         public DbSet<PosTerminalInfo> PosTerminalInfo { get; set; }
         public DbSet<UserLog> UserLog { get; set; }
-
-        // ✅ Auto-calculate subtotal before saving
-        //public override int SaveChanges()
-        //{
-        //    foreach (var entry in ChangeTracker.Entries<Item>())
-        //    {
-        //        if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
-        //        {
-        //            entry.Entity.ItemSubTotal = (decimal)entry.Entity.ItemQTY * entry.Entity.ItemPrice;
-        //        }
-        //    }
-        //    return base.SaveChanges();
-        //}
     }
 }

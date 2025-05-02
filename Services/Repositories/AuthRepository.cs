@@ -75,6 +75,34 @@ namespace EBISX_POS.API.Services.Repositories
             return (true, "Cash withdrawal recorded.");
         }
 
+        public async Task<bool> ChangeMode(string managerEmail)
+        {
+            var manager = await _dataContext.User
+                .FirstOrDefaultAsync(u => u.UserEmail == managerEmail && u.UserRole != "Cashier" && u.IsActive);
+
+            if (manager == null)
+                return false;
+
+            var posTerminalInfo = await _dataContext.PosTerminalInfo.FirstOrDefaultAsync();
+            if (posTerminalInfo == null)
+            {
+                throw new InvalidOperationException("POS Terminal Info not found");
+            }
+
+            // Toggle the training mode
+            posTerminalInfo.IsTrainMode = !posTerminalInfo.IsTrainMode;
+
+            // Log the mode change
+            _dataContext.UserLog.Add(new UserLog
+            {
+                Manager = manager,
+                Action = $"Changed to {(posTerminalInfo.IsTrainMode ? "Training" : "Live")} Mode"
+            });
+
+            await _dataContext.SaveChangesAsync();
+            return posTerminalInfo.IsTrainMode;
+        }
+
         public async Task<(bool, string)> CheckData()
         {
             var hasUsers = await _dataContext.User
@@ -134,6 +162,16 @@ namespace EBISX_POS.API.Services.Repositories
                 .FirstOrDefaultAsync();
 
             return timestamp != null;
+        }
+
+        public async Task<bool> IsTrainMode()
+        {
+            var posTerminalInfo = await _dataContext.PosTerminalInfo.FirstOrDefaultAsync();
+            if (posTerminalInfo == null)
+            {
+                throw new InvalidOperationException("POS Terminal Info not found");
+            }
+            return posTerminalInfo.IsTrainMode;
         }
 
         public async Task<(bool, string)> LoadData()
@@ -208,7 +246,7 @@ namespace EBISX_POS.API.Services.Repositories
             };
             _dataContext.Timestamp.Add(timestamp);
 
-            // Optionally log the manager’s approval
+            // Optionally log the manager's approval
             if (manager != null)
             {
                 _dataContext.UserLog.Add(new UserLog

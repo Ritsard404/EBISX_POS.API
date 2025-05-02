@@ -1,4 +1,5 @@
 using EBISX_POS.API.Data;
+using EBISX_POS.API.Services;
 using EBISX_POS.API.Services.Interfaces;
 using EBISX_POS.API.Services.Repositories;
 using EBISX_POS.API.Settings;
@@ -62,6 +63,7 @@ namespace EBISX_POS.API.Extensions
             services.AddScoped<IJournal, JournalRepository>();
             services.AddScoped<IEbisxAPI, EbisxAPIRepository>();
             services.AddScoped<IReport, ReportRepository>();
+            services.AddScoped<IInvoiceNumberService, InvoiceNumberService>();
 
             return services;
         }

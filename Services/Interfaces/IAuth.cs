@@ -16,5 +16,7 @@ namespace EBISX_POS.API.Services.Interfaces
         Task<(bool, string)> SetCashOutDrawer(string cashierEmail, decimal cash);
         Task<(bool, string)> CashWithdrawDrawer(string cashierEmail, string managerEmail, decimal cash);
         Task<bool> IsCashedDrawer(string cashierEmail);
+        Task<bool> IsTrainMode();
+        Task<bool> ChangeMode(string managerEmail);
     }
 }

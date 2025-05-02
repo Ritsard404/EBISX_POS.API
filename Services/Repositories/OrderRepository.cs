@@ -14,7 +14,7 @@ using System.Threading;
 
 namespace EBISX_POS.API.Services.Repositories
 {
-    public class OrderRepository(DataContext _dataContext, ILogger<OrderRepository> _logger, IJournal _journal) : IOrder
+    public class OrderRepository(DataContext _dataContext, IAuth _auth, IInvoiceNumberService _invoiceNumber, IJournal _journal) : IOrder
     {
         public async Task<(bool, string)> AddCurrentOrderVoid(AddCurrentOrderVoidDTO voidOrder)
         {
@@ -67,6 +67,10 @@ namespace EBISX_POS.API.Services.Repositories
                 if (!users.TryGetValue(voidOrder.managerEmail, out managerUser) || managerUser.UserRole == "Cashier")
                     return (false, "Unauthorized Card!");
 
+                // Get the current training mode status
+                var isTrainMode = await _auth.IsTrainMode();
+                var invoiceNumber = await _invoiceNumber.GenerateInvoiceNumberAsync(isTrainMode);
+
                 // Create new order
                 currentOrder = new Order
                 {
@@ -76,6 +80,8 @@ namespace EBISX_POS.API.Services.Repositories
                     Cashier = cashierUser,
                     IsPending = false,
                     IsCancelled = true,
+                    IsTrainMode = isTrainMode,
+                    InvoiceNumber = invoiceNumber,
                     Items = new List<Item>(),
                     UserLog = new List<UserLog>()
                 };
@@ -139,7 +145,7 @@ namespace EBISX_POS.API.Services.Repositories
                 {
                     Manager = managerUser,
                     Cashier = cashierUser,
-                    Action = $"Cancel Order: {currentOrder.Id:D12}"
+                    Action = $"Cancel Order: {currentOrder.InvoiceNumber}"
                 }
             );
 
@@ -184,6 +190,12 @@ namespace EBISX_POS.API.Services.Repositories
                     return (false, "Cashier not found.");
                 }
 
+                // Get the current training mode status using IAuth service
+                var isTrainMode = await _auth.IsTrainMode();
+
+                // Generate invoice number based on training mode
+                var invoiceNumber = await _invoiceNumber.GenerateInvoiceNumberAsync(isTrainMode);
+
                 currentOrder = new Order
                 {
                     OrderType = "",
@@ -192,6 +204,8 @@ namespace EBISX_POS.API.Services.Repositories
                     Cashier = cashier,
                     IsPending = true,
                     IsCancelled = false,
+                    IsTrainMode = isTrainMode,
+                    InvoiceNumber = invoiceNumber,
                     Items = new List<Item>()
                 };
 
@@ -368,7 +382,7 @@ namespace EBISX_POS.API.Services.Repositories
                 {
                     Manager = manager,
                     Cashier = cashier,
-                    Action = $"Discount {(addPwdScDiscount.IsSeniorDisc ? "Senior" : "PWD")} Order: {currentOrder.Id:D12}"
+                    Action = $"Discount {(addPwdScDiscount.IsSeniorDisc ? "Senior" : "PWD")} Order: {currentOrder.InvoiceNumber}"
                 }
             );
 
@@ -423,7 +437,7 @@ namespace EBISX_POS.API.Services.Repositories
                 {
                     Manager = manager,
                     Cashier = cashier,
-                    Action = $"Other Discount Order: {currentOrder.Id:D12}"
+                    Action = $"Other Discount Order: {currentOrder.InvoiceNumber}"
                 }
             );
 
@@ -469,7 +483,7 @@ namespace EBISX_POS.API.Services.Repositories
             {
                 Manager = manager,
                 Cashier = cashier,
-                Action = $"Cancel Order: {currentOrder.Id:D12}",
+                Action = $"Cancel Order: {currentOrder.InvoiceNumber}",
             });
 
             // Void all items in the order
@@ -530,7 +544,6 @@ namespace EBISX_POS.API.Services.Repositories
 
             if (currentOrder == null)
             {
-
                 currentOrder = new Order
                 {
                     OrderType = "",
@@ -539,6 +552,8 @@ namespace EBISX_POS.API.Services.Repositories
                     Cashier = cashier,
                     IsPending = true,
                     IsCancelled = false,
+                    IsTrainMode = await _auth.IsTrainMode(),
+                    InvoiceNumber = await _invoiceNumber.GenerateInvoiceNumberAsync(await _auth.IsTrainMode()),
                     Items = new List<Item>(),
                     Coupon = new List<CouponPromo> { availedCoupon }
                 };
@@ -560,7 +575,7 @@ namespace EBISX_POS.API.Services.Repositories
             {
                 Manager = manager,
                 Cashier = cashier,
-                Action = $"Avail Coupon {availedCoupon.Description} on Order: {currentOrder.Id:D12}",
+                Action = $"Avail Coupon {availedCoupon.Description} on Order: {currentOrder.InvoiceNumber}",
             });
 
             availedCoupon.IsAvailable = false;
@@ -633,7 +648,7 @@ namespace EBISX_POS.API.Services.Repositories
             order.UserLog.Add(new UserLog
             {
                 Cashier = cashier,
-                Action = $"Updated item quantity on Order: {order.Id:D12}"
+                Action = $"Updated item quantity on Order: {order.InvoiceNumber}"
             });
 
             await _dataContext.SaveChangesAsync();
@@ -646,6 +661,8 @@ namespace EBISX_POS.API.Services.Repositories
             // Check if the cashier is valid and active
             var cashier = await _dataContext.User
                 .FirstOrDefaultAsync(u => u.UserEmail == finalizeOrder.CashierEmail && u.IsActive);
+
+            var isTrainMode = await _auth.IsTrainMode();
 
             if (cashier == null)
             {
@@ -688,7 +705,7 @@ namespace EBISX_POS.API.Services.Repositories
             finishOrder.UserLog.Add(new UserLog
             {
                 Cashier = cashier,
-                Action = $"Successfull Order: {finishOrder.Id:D12}"
+                Action = $"Successfull Order: {finishOrder.InvoiceNumber}"
             });
 
             // Add journal entries
@@ -702,7 +719,7 @@ namespace EBISX_POS.API.Services.Repositories
             // Prepare the response DTO
             var response = new FinalizeOrderResponseDTO
             {
-                InvoiceNumber = finishOrder.Id.ToString("D12"),  // Format invoice number to 12 digits
+                InvoiceNumber = finishOrder.InvoiceNumber.ToString("D12"),  // Use the stored invoice number
                 PosSerialNumber = terminal.PosSerialNumber,
                 MinNumber = terminal.MinNumber,
                 AccreditationNumber = terminal.AccreditationNumber,
@@ -712,7 +729,8 @@ namespace EBISX_POS.API.Services.Repositories
                 RegisteredName = terminal.RegisteredName,
                 Address = terminal.Address,
                 VatTinNumber = terminal.VatTinNumber,
-                InvoiceDate = DateTime.Now.ToString("MM/dd/yyyy")
+                InvoiceDate = DateTime.Now.ToString("MM/dd/yyyy"),
+                IsTrainMode = isTrainMode
             };
 
             // Return success with response DTO
@@ -945,7 +963,23 @@ namespace EBISX_POS.API.Services.Repositories
                 .FirstOrDefaultAsync(o => o.IsPending);
 
             if (currentOrder == null)
-                return (false, "No pending order found. Please start an order before applying a promo discount.");
+            {
+                var isTrainMode = await _auth.IsTrainMode();
+                currentOrder = new Order
+                {
+                    OrderType = "",
+                    TotalAmount = 0m,
+                    CreatedAt = DateTimeOffset.Now,
+                    Cashier = cashier,
+                    IsPending = true,
+                    IsCancelled = false,
+                    IsTrainMode = isTrainMode,
+                    InvoiceNumber = await _invoiceNumber.GenerateInvoiceNumberAsync(isTrainMode),
+                    Items = new List<Item>()
+                };
+
+                await _dataContext.Order.AddAsync(currentOrder);
+            }
             if (!string.IsNullOrEmpty(currentOrder.DiscountType))
                 return (false, "A discount has already been applied to this order. No additional discount can be applied.");
             if (currentOrder.Promo != null)
@@ -970,7 +1004,7 @@ namespace EBISX_POS.API.Services.Repositories
                     {
                         Manager = manager,
                         Cashier = cashier,
-                        Action = $"Avail Promo {promo.Description} on Order: {currentOrder.Id:D12}",
+                        Action = $"Avail Promo {promo.Description} on Order: {currentOrder.InvoiceNumber}",
                     });
 
                     // Mark the promo as used
@@ -1099,7 +1133,7 @@ namespace EBISX_POS.API.Services.Repositories
             {
                 Manager = manager,
                 Cashier = cashier,
-                Action = $"Void item on Order: {order.Id:D12}",
+                Action = $"Void item on Order: {order.InvoiceNumber}",
             });
 
             await _dataContext.SaveChangesAsync();
@@ -1146,7 +1180,7 @@ namespace EBISX_POS.API.Services.Repositories
 
         }
 
-        public async Task<(bool, string)> RefundOrder(string managerEmail, long orderId)
+        public async Task<(bool, string)> RefundOrder(string managerEmail, long invoiceNumber)
         {
             var manager = await _dataContext.User
                 .FirstOrDefaultAsync(u => u.UserEmail == managerEmail && u.IsActive);
@@ -1157,15 +1191,32 @@ namespace EBISX_POS.API.Services.Repositories
                 return (false, "Invalid Credential.");
             }
 
-            // Retrieve the current pending order for the cashier
+            // Retrieve the order by invoice number
             var orderToRefund = await _dataContext.Order
                 .Include(o => o.Cashier)
                 .Include(o => o.Items)
-                .FirstOrDefaultAsync(o => o.Id == orderId);
+                .FirstOrDefaultAsync(o => o.InvoiceNumber == invoiceNumber);
 
-            if (orderToRefund == null || orderToRefund.IsReturned || orderToRefund.IsCancelled)
+            if (orderToRefund == null)
             {
-                return (false, "No Order Exist");
+                return (false, "Order not found.");
+            }
+
+            if (orderToRefund.IsReturned)
+            {
+                return (false, "Order has already been returned.");
+            }
+
+            if (orderToRefund.IsCancelled)
+            {
+                return (false, "Cannot refund a cancelled order.");
+            }
+
+            // Check if the current training mode matches the order's training mode
+            var currentTrainMode = await _auth.IsTrainMode();
+            if (orderToRefund.IsTrainMode != currentTrainMode)
+            {
+                return (false, $"Cannot refund order. Current mode is {(currentTrainMode ? "Training" : "Live")} but order was created in {(orderToRefund.IsTrainMode ? "Training" : "Live")} mode.");
             }
 
             orderToRefund.IsReturned = true;
@@ -1173,11 +1224,12 @@ namespace EBISX_POS.API.Services.Repositories
             orderToRefund.UserLog.Add(new UserLog
             {
                 Manager = manager,
-                Action = "Order Returned",
+                Action = $"Order Returned: {invoiceNumber} ({(orderToRefund.IsTrainMode ? "Training" : "Live")} Mode)",
             });
 
             await _dataContext.SaveChangesAsync();
 
+            // Use the order's ID for journal entries (internal tracking)
             await _journal.AddItemsJournal(orderToRefund.Id);
             await _journal.AddTendersJournal(orderToRefund.Id);
             await _journal.AddTotalsJournal(orderToRefund.Id);

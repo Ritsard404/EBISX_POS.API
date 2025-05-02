@@ -116,5 +116,19 @@ namespace EBISX_POS.API.Controllers
 
             return BadRequest(message);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> IsTrainMode()
+        {
+            var isTrainMode = await _auth.IsTrainMode();
+            return Ok(new { isTrainMode });
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> ChangeMode(string managerEmail)
+        {
+            var isTrainMode = await _auth.ChangeMode(managerEmail);
+            return Ok(new { isTrainMode });
+        }
     }
 }
