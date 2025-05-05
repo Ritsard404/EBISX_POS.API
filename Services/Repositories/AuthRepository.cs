@@ -242,7 +242,8 @@ namespace EBISX_POS.API.Services.Repositories
             {
                 TsIn = DateTimeOffset.Now,
                 Cashier = cashier,    // non-null
-                ManagerIn = manager      // may be null if self-approved
+                ManagerIn = manager,      // may be null if self-approved
+                IsTrainMode = await IsTrainMode()
             };
             _dataContext.Timestamp.Add(timestamp);
 
