@@ -1,4 +1,5 @@
 ﻿using EBISX_POS.API.Data;
+using EBISX_POS.API.Models;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 
@@ -126,12 +127,31 @@ namespace EBISX_POS.API.Extensions
                     await InitializeDatabaseAsync(journalContext, "Journal");
 
                     //// Check if we need to seed initial data
-                    //if (!await dataContext.User.AnyAsync())
-                    //{
-                    //    _logger.LogInformation("Seeding initial data for POS database...");
-                    //    await SeedData.InitializeAsync(_services);
-                    //    _logger.LogInformation("Initial data seeded successfully.");
-                    //}
+                    if (!await dataContext.PosTerminalInfo.AnyAsync())
+                    {
+                        //    _logger.LogInformation("Seeding initial data for POS database...");
+                        //    await SeedData.InitializeAsync(_services);
+                        //    _logger.LogInformation("Initial data seeded successfully.");
+
+
+                        var terminal = new PosTerminalInfo
+                        {
+                            PosSerialNumber = "POS-123456789",
+                            MinNumber = "MIN-987654321",
+                            AccreditationNumber = "ACC-00112233",
+                            PtuNumber = "PTU-44556677",
+                            DateIssued = new DateTime(2023, 1, 1),
+                            ValidUntil = new DateTime(2028, 1, 1),
+                            RegisteredName = "EBISX Food Services",
+                            OperatedBy = "EBISX Food, Inc.",
+                            Address = "123 Main Street, Cebu City",
+                            VatTinNumber = "123-456-789-000"
+                        };
+
+
+                        await dataContext.PosTerminalInfo.AddAsync(terminal);
+                        await dataContext.SaveChangesAsync();
+                    }
                 }
                 catch (Exception ex)
                 {

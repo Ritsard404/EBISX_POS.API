@@ -25,21 +25,21 @@ namespace EBISX_POS.API.Data
                 // Only seed if the database is completely empty
                 if (!context.Database.CanConnect() || !context.User.Any())
                 {
-                    var terminal = new PosTerminalInfo
-                    {
-                        PosSerialNumber = "POS-123456789",
-                        MinNumber = "MIN-987654321",
-                        AccreditationNumber = "ACC-00112233",
-                        PtuNumber = "PTU-44556677",
-                        DateIssued = new DateTime(2023, 1, 1),
-                        ValidUntil = new DateTime(2028, 1, 1),
-                        RegisteredName = "EBISX Food Services",
-                        OperatedBy = "EBISX Food, Inc.",
-                        Address = "123 Main Street, Cebu City",
-                        VatTinNumber = "123-456-789-000"
-                    };
+                    //var terminal = new PosTerminalInfo
+                    //{
+                    //    PosSerialNumber = "POS-123456789",
+                    //    MinNumber = "MIN-987654321",
+                    //    AccreditationNumber = "ACC-00112233",
+                    //    PtuNumber = "PTU-44556677",
+                    //    DateIssued = new DateTime(2023, 1, 1),
+                    //    ValidUntil = new DateTime(2028, 1, 1),
+                    //    RegisteredName = "EBISX Food Services",
+                    //    OperatedBy = "EBISX Food, Inc.",
+                    //    Address = "123 Main Street, Cebu City",
+                    //    VatTinNumber = "123-456-789-000"
+                    //};
 
-                    context.PosTerminalInfo.Add(terminal);
+                    //context.PosTerminalInfo.Add(terminal);
 
                     var users = new User[]
                     {
