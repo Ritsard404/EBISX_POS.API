@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace EBISX_POS.API.Services.Repositories
 {
-    public class ReportRepository(DataContext _dataContext) : IReport
+    public class ReportRepository(DataContext _dataContext, IAuth _auth) : IReport
     {
         public async Task<(string CashInDrawer, string CurrentCashDrawer)> CashTrack(string cashierEmail)
         {
@@ -60,6 +60,7 @@ namespace EBISX_POS.API.Services.Repositories
             // normalize to midnight at the start of each day
             var start = fromDate.Date;
             var end = toDate.Date.AddDays(1);
+            var isTrainMode = await _auth.IsTrainMode();
 
             return await _dataContext.Order
                 .Include(o => o.Cashier)
@@ -68,7 +69,8 @@ namespace EBISX_POS.API.Services.Repositories
                     o.CreatedAt < end &&
                     !o.IsCancelled &&
                     !o.IsPending &&
-                    !o.IsReturned)
+                    !o.IsReturned &&
+                    o.IsTrainMode == isTrainMode)
                 .Select(s => new GetInvoicesDTO
                 {
                     InvoiceNum = s.Id,
