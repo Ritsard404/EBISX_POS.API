@@ -62,8 +62,12 @@ namespace EBISX_POS.API.Services.Repositories
             var end = toDate.Date.AddDays(1);
             var isTrainMode = await _auth.IsTrainMode();
 
-            return await _dataContext.Order
+            // First fetch all orders with their related data
+            var orders = await _dataContext.Order
                 .Include(o => o.Cashier)
+                .ToListAsync();
+
+            var filteredOrders = orders
                 .Where(o =>
                     o.CreatedAt >= start &&
                     o.CreatedAt < end &&
@@ -81,7 +85,10 @@ namespace EBISX_POS.API.Services.Repositories
                     CashierEmail = s.Cashier.UserEmail,
                 })
                 .OrderBy(i => i.InvoiceNum)
-                .ToListAsync();
+                .ToList();
+
+            return filteredOrders;
+
         }
 
 
