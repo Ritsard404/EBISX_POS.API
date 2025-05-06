@@ -7,7 +7,8 @@ namespace EBISX_POS.API.Data
     {
         public DataContext(DbContextOptions<DataContext> options) : base(options)
         {
-            
+            // Ensure database is created
+            Database.EnsureCreated();
         }
         public DbSet<User> User { get; set; }
         public DbSet<Category> Category { get; set; }

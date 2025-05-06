@@ -46,10 +46,10 @@ namespace EBISX_POS.API.Extensions
             var journalConnectionString = configuration.GetConnectionString("JournalConnection");
 
             services.AddDbContext<DataContext>(options =>
-                options.UseMySql(posConnectionString, ServerVersion.AutoDetect(posConnectionString)));
+                options.UseSqlite(posConnectionString));
 
             services.AddDbContext<JournalContext>(options =>
-                options.UseMySql(journalConnectionString, ServerVersion.AutoDetect(journalConnectionString)));
+                options.UseSqlite(journalConnectionString));
 
             return services;
         }

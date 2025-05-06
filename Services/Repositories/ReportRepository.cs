@@ -519,7 +519,7 @@ namespace EBISX_POS.API.Services.Repositories
             decimal openingFund = allTimestamps
                 .Where(t => t.TsOut.HasValue
                             && t.TsOut.Value.LocalDateTime >= startDate)
-                // ensure ordering so LastOrDefault() really is the “last”
+                // ensure ordering so LastOrDefault() really is the "last"
                 .OrderBy(t => t.TsOut.Value.LocalDateTime)
                 .LastOrDefault()?
                 .CashInDrawerAmount
@@ -673,7 +673,6 @@ namespace EBISX_POS.API.Services.Repositories
                     c.CreatedAt >= start &&
                     c.CreatedAt < end);
 
-
             var userLogs = await userLogsQuery
                 .Select(m => new UserActionLogDTO
                 {
@@ -692,18 +691,21 @@ namespace EBISX_POS.API.Services.Repositories
 
             logs.AddRange(userLogs);
 
-            // Process timestamps
+            // Process timestamps - Modified query for SQLite compatibility
             var timestamps = await _dataContext.Timestamp
                 .AsNoTracking()
                 .Include(t => t.Cashier)
                 .Include(t => t.ManagerIn)
                 .Include(t => t.ManagerOut)
-                .Where(t =>
-                    (t.TsIn.HasValue && t.TsIn.Value.Date >= start && t.TsIn.Value.Date < end) ||
-                    (t.TsOut.HasValue && t.TsOut.Value.Date >= start && t.TsOut.Value.Date < end))
                 .ToListAsync();
 
-            ProcessTimestamps(timestamps, logs);
+            // Filter timestamps in memory after fetching
+            var filteredTimestamps = timestamps.Where(t =>
+                (t.TsIn.HasValue && t.TsIn.Value.DateTime.Date >= start && t.TsIn.Value.DateTime.Date < end) ||
+                (t.TsOut.HasValue && t.TsOut.Value.DateTime.Date >= start && t.TsOut.Value.DateTime.Date < end))
+                .ToList();
+
+            ProcessTimestamps(filteredTimestamps, logs);
 
             return logs.OrderBy(l => l.SortActionDate).ToList();
         }
