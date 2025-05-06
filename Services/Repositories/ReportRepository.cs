@@ -14,6 +14,7 @@ namespace EBISX_POS.API.Services.Repositories
     {
         public async Task<(string CashInDrawer, string CurrentCashDrawer)> CashTrack(string cashierEmail)
         {
+            // First get the timestamp
             var timestamp = await _dataContext.Timestamp
                 .Include(t => t.Cashier)
                 .Where(t => t.Cashier.UserEmail == cashierEmail && t.TsOut == null && t.CashInDrawerAmount != null && t.CashInDrawerAmount >= 1000)
@@ -24,23 +25,29 @@ namespace EBISX_POS.API.Services.Repositories
 
             var tsIn = timestamp.TsIn;
 
-            decimal totalCashInDrawer = await _dataContext.Order
-                    .Where(o =>
-                        o.Cashier.UserEmail == cashierEmail &&
-                        !o.IsCancelled &&
-                        !o.IsPending &&
-                        !o.IsReturned &&
-                        o.CreatedAt >= tsIn &&
-                        o.CashTendered != null &&
-                        o.TotalAmount != 0
-                    )
-                    .SumAsync(o =>
-                        o.CashTendered!.Value - o.ChangeAmount!.Value
-                    );
+            // Fetch all orders with their cashier
+            var orders = await _dataContext.Order
+                .Include(o => o.Cashier)
+                .ToListAsync();
 
-            var totalWithdrawn = await _dataContext.UserLog
+            // Filter and calculate in memory
+            decimal totalCashInDrawer = orders
+                .Where(o =>
+                    o.Cashier.UserEmail == cashierEmail &&
+                    !o.IsCancelled &&
+                    !o.IsPending &&
+                    !o.IsReturned &&
+                    o.CreatedAt >= tsIn &&
+                    o.CashTendered != null &&
+                    o.TotalAmount != 0)
+                .Sum(o => o.CashTendered!.Value - o.ChangeAmount!.Value);
+
+            // Get withdrawals
+            var withdrawals = await _dataContext.UserLog
                 .Where(u => u.Timestamp != null && u.Timestamp.Id == timestamp.Id && u.Action == "Cash Withdrawal")
-                .SumAsync(u => u.WithdrawAmount);
+                .ToListAsync();
+
+            var totalWithdrawn = withdrawals.Sum(u => u.WithdrawAmount);
 
             var phCulture = new CultureInfo("en-PH");
 
