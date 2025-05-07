@@ -4,7 +4,7 @@ using EBISX_POS.API.Services.Interfaces;
 using EBISX_POS.API.Services.Repositories;
 using EBISX_POS.API.Settings;
 using Microsoft.EntityFrameworkCore;
-
+using System.Diagnostics;
 
 namespace EBISX_POS.API.Extensions
 {
@@ -12,8 +12,44 @@ namespace EBISX_POS.API.Extensions
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
+            Debug.WriteLine("Configuring application services...");
+            Debug.WriteLine($"Base Directory: {AppContext.BaseDirectory}");
+
             // Add configuration services
-            services.Configure<FilePaths>(configuration.GetSection("FilePaths"));
+            var filePaths = new FilePaths
+            {
+                ImagePath = Path.Combine(AppContext.BaseDirectory, "Images"),
+                BackUp = Path.Combine(AppContext.BaseDirectory, "Backups")
+            };
+
+            // Try to get configuration from appsettings.json
+            var configFilePaths = configuration.GetSection("FilePaths").Get<FilePaths>();
+            if (configFilePaths != null)
+            {
+                Debug.WriteLine("Found FilePaths in configuration");
+                if (!string.IsNullOrEmpty(configFilePaths.ImagePath))
+                {
+                    filePaths.ImagePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, configFilePaths.ImagePath));
+                }
+                if (!string.IsNullOrEmpty(configFilePaths.BackUp))
+                {
+                    filePaths.BackUp = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, configFilePaths.BackUp));
+                }
+            }
+
+            Debug.WriteLine($"Final FilePaths configuration:");
+            Debug.WriteLine($"ImagePath: {filePaths.ImagePath}");
+            Debug.WriteLine($"BackUp: {filePaths.BackUp}");
+
+            // Ensure directories exist
+            Directory.CreateDirectory(filePaths.ImagePath);
+            Directory.CreateDirectory(filePaths.BackUp);
+
+            services.Configure<FilePaths>(options =>
+            {
+                options.ImagePath = filePaths.ImagePath;
+                options.BackUp = filePaths.BackUp;
+            });
 
             // Register database contexts
             services.AddDatabaseContexts(configuration);
@@ -44,6 +80,9 @@ namespace EBISX_POS.API.Extensions
         {
             var posConnectionString = configuration.GetConnectionString("POSConnection");
             var journalConnectionString = configuration.GetConnectionString("JournalConnection");
+
+            Debug.WriteLine($"POS Connection String: {posConnectionString}");
+            Debug.WriteLine($"Journal Connection String: {journalConnectionString}");
 
             services.AddDbContext<DataContext>(options =>
                 options.UseSqlite(posConnectionString));

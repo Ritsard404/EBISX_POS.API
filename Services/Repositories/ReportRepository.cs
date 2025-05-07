@@ -367,25 +367,30 @@ namespace EBISX_POS.API.Services.Repositories
 
             // Calculate financials with null protection
             decimal openingFundDec = ts?.CashInDrawerAmount ?? defaultDecimal;
-            decimal withdrawnAmount = await _dataContext.UserLog
+            
+            // Move withdrawal calculation to memory
+            var withdrawals = await _dataContext.UserLog
                 .Where(mw => mw.Timestamp == ts)
-                .SumAsync(mw => mw.WithdrawAmount);
+                .ToListAsync();
+            decimal withdrawnAmount = withdrawals.Sum(mw => mw.WithdrawAmount);
 
+            // Calculate void and refund amounts in memory
             decimal voidDec = orders.Where(o => o.IsCancelled)
                                   .Sum(o => o?.TotalAmount ?? defaultDecimal);
             decimal refundDec = orders.Where(o => o.IsReturned)
                                     .Sum(o => o?.TotalAmount ?? defaultDecimal);
 
+            // Calculate valid orders total in memory
             decimal validOrdersTotal = orders.Where(o => !o.IsCancelled && !o.IsReturned)
-                                           .Sum(o => o?.CashTendered - o?.ChangeAmount ?? defaultDecimal);
+                                           .Sum(o => (o?.CashTendered ?? defaultDecimal) - (o?.ChangeAmount ?? defaultDecimal));
 
             decimal shortOverDec = openingFundDec + validOrdersTotal
                                  - ((ts?.CashOutDrawerAmount ?? defaultDecimal) - withdrawnAmount);
 
-            // Safe payment processing
+            // Safe payment processing - moved to memory
             var payments = new Payments
             {
-                Cash = orders.Sum(o => o?.CashTendered - o?.ChangeAmount ?? defaultDecimal),
+                Cash = orders.Sum(o => (o?.CashTendered ?? defaultDecimal) - (o?.ChangeAmount ?? defaultDecimal)),
                 OtherPayments = orders
                     .SelectMany(o => o.AlternativePayments ?? new List<AlternativePayments>())
                     .GroupBy(ap => ap.SaleType?.Name ?? "Unknown")

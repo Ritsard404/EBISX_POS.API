@@ -1,6 +1,15 @@
 ﻿using EBISX_POS.API.Extensions;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Set the base directory for the API
+var baseDir = AppContext.BaseDirectory;
+Debug.WriteLine($"API Base Directory: {baseDir}");
+
+// Ensure configuration is loaded correctly
+builder.Configuration.SetBasePath(baseDir)
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
 // Configure services
 builder.Services.AddApplicationServices(builder.Configuration);

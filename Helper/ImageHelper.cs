@@ -1,35 +1,46 @@
-﻿using RestSharp;
+﻿using System;
+using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace EBISX_POS.API.Helper
 {
     public static class ImageHelper
     {
-        public static async Task<string> DownloadAndSaveImageAsync(string imageUrl, string saveFolder)
+        private static readonly HttpClient _httpClient = new HttpClient();
+
+        public static async Task<string> DownloadAndSaveImageAsync(string imageUrl, string saveDirectory)
         {
-            // Check if the folder exists; create it only if it doesn't.
-            if (!Directory.Exists(saveFolder))
+            try
             {
-                Directory.CreateDirectory(saveFolder);
-            }
+                Debug.WriteLine($"Downloading image from: {imageUrl}");
+                Debug.WriteLine($"Saving to directory: {saveDirectory}");
 
-            // Get the file name from the URL.
-            var fileName = Path.GetFileName(new Uri(imageUrl).AbsolutePath);
-            var filePath = Path.Combine(saveFolder, fileName);
+                // Ensure the directory exists
+                if (!Directory.Exists(saveDirectory))
+                {
+                    Directory.CreateDirectory(saveDirectory);
+                }
 
-            // Create a RestSharp client and request.
-            var client = new RestClient();
-            var request = new RestRequest(imageUrl, Method.Get);
+                // Generate a unique filename
+                string fileName = $"{Guid.NewGuid()}.png";
+                string filePath = Path.Combine(saveDirectory, fileName);
 
-            // Execute the request.
-            var response = await client.ExecuteAsync(request);
-            if (response.IsSuccessful && response.RawBytes != null)
-            {
-                await File.WriteAllBytesAsync(filePath, response.RawBytes);
+                // Download the image
+                byte[] imageBytes = await _httpClient.GetByteArrayAsync(imageUrl);
+                
+                // Save the image
+                await File.WriteAllBytesAsync(filePath, imageBytes);
+                
+                Debug.WriteLine($"Image saved successfully to: {filePath}");
                 return filePath;
             }
-            else
+            catch (Exception ex)
             {
-                throw new Exception($"Failed to download image. Status: {response.StatusCode}");
+                Debug.WriteLine($"Error downloading/saving image: {ex.Message}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw;
             }
         }
     }

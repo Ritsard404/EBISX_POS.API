@@ -8,6 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Http;
+using System.Diagnostics;
 
 namespace EBISX_POS.API.Services.Repositories
 {
@@ -309,19 +310,40 @@ namespace EBISX_POS.API.Services.Repositories
 
         public async Task<(bool, string)> SetCashInDrawer(string cashierEmail, decimal cash)
         {
-            var timestamp = await _dataContext.Timestamp
-                .Include(t => t.Cashier)
-                .Where(t => t.Cashier.UserEmail == cashierEmail && t.TsOut == null)
-                .FirstAsync();
+            try
+            {
+                // First check if cashier exists
+                var cashier = await _dataContext.User
+                    .FirstOrDefaultAsync(u => u.UserEmail == cashierEmail && u.UserRole == "Cashier" && u.IsActive);
 
-            timestamp.CashInDrawerAmount = cash;
+                if (cashier == null)
+                    return (false, "Cashier not found or is not active!");
 
-            if (timestamp.CashInDrawerAmount == null)
-                return (false, "Cash in drawer amount is null!");
+                // Get the active timestamp (where cashier is clocked in)
+                var timestamp = await _dataContext.Timestamp
+                    .Include(t => t.Cashier)
+                    .Where(t => t.Cashier.UserEmail == cashierEmail && t.TsOut == null)
+                    .FirstOrDefaultAsync();
 
-            await _dataContext.SaveChangesAsync();
+                if (timestamp == null)
+                    return (false, "No active session found for this cashier. Please clock in first.");
 
-            return (true, "Cash in drawer set!");
+                // Validate cash amount
+                if (cash < 0)
+                    return (false, "Cash amount cannot be negative!");
+
+                // Set the cash amount
+                timestamp.CashInDrawerAmount = cash;
+                await _dataContext.SaveChangesAsync();
+
+                return (true, "Cash in drawer set successfully!");
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                Debug.WriteLine($"Error setting cash in drawer: {ex.Message}");
+                return (false, "An error occurred while setting cash in drawer.");
+            }
         }
 
         public async Task<(bool, string)> SetCashOutDrawer(string cashierEmail, decimal cash)
